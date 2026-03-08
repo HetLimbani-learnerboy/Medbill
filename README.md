@@ -1,2 +1,0 @@
-# Medbill
-ASDD-Project
