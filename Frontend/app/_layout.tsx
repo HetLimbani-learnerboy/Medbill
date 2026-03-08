@@ -1,24 +1,37 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { Tabs } from "expo-router";
+import { Ionicons, AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Tabs screenOptions={{ tabBarActiveTintColor: 'blue' }}>
+      <Tabs.Screen 
+        name='index'
+        options={{
+          title: 'Scan',
+          tabBarIcon: ({ color }) => <AntDesign name="scan" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen 
+        name='receipts'
+        options={{
+          title: 'Receipts',
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons name="file-document-multiple" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen 
+        name='insights'
+        options={{
+          title: 'Insights',
+          tabBarIcon: ({ color }) => <Ionicons size={28} name="trending-up" color={color} />,
+        }}
+      />
+      <Tabs.Screen 
+        name='settings'
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <Ionicons size={28} name="settings" color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }
