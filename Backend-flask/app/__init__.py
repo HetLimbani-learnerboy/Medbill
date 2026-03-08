@@ -15,4 +15,5 @@ def create_app():
 
     return app
 
+
 from app.models import user_model
