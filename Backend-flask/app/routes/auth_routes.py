@@ -42,6 +42,32 @@ def register():
         db.session.rollback()
         return jsonify({'message': 'Database error', 'error': str(e)}), 500
 
+@auth_bp.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password are required'}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user or not user.check_password(password):
+        return jsonify({'message': 'Invalid email or password'}), 401
+
+    if not user.is_verified:
+        return jsonify({'message': 'Email not verified. Please verify your email before logging in.'}), 403
+
+    return jsonify({
+        'message': 'Login successful',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role
+        }
+    }), 200
 
 # ---------------- USER REGISTRATION WITH EMAIL VERIFICATION ----------------
 # @auth_bp.route('/api/signup', methods=['POST'])

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -16,6 +17,7 @@ const LandingPage: React.FC = () => {
       
       {/* Hero Section */}
       <View style={styles.hero}>
+        <Image style={styles.logo} source={require("../assets/Medbill-logo.png")} />
         <Text style={styles.title}>Medbill</Text>
         <Text style={styles.subtitle}>
           Smart Billing & Inventory Insights for Pharmacies
@@ -30,7 +32,7 @@ const LandingPage: React.FC = () => {
 
         <TouchableOpacity
           style={styles.loginBtn}
-          onPress={() => navigation.navigate("Login")}
+          onPress={() => navigation.navigate("SignIn")}
         >
           <Text style={styles.btnText}>Sign In</Text>
         </TouchableOpacity>
@@ -89,100 +91,144 @@ const LandingPage: React.FC = () => {
 export default LandingPage;
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#F8FAFC",
+
+  logo:{
+     width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#14B8A6",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+    marginBottom: 25,
+    alignSelf: "center"
   },
 
+  container: {
+    flex: 1,
+    backgroundColor: "#E6F7F7",
+    paddingHorizontal: 20,
+  },
+
+  /* Hero Section */
+
   hero: {
-    padding: 30,
     alignItems: "center",
+    marginTop: 60,
+    marginBottom: 40,
   },
 
   title: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: "#1E293B",
+    fontSize: 42,
+    fontWeight: "900",
+    color: "#0F766E",
+    marginBottom: 10,
   },
 
   subtitle: {
     fontSize: 16,
-    color: "#64748B",
     textAlign: "center",
-    marginTop: 10,
-    marginBottom: 25,
+    color: "#475569",
+    marginBottom: 30,
+    paddingHorizontal: 10,
   },
 
   signupBtn: {
-    backgroundColor: "#2563EB",
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-    marginBottom: 12,
     width: "80%",
+    backgroundColor: "#14B8A6",
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
+    marginBottom: 12,
+    shadowColor: "#14B8A6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   loginBtn: {
-    backgroundColor: "#1E293B",
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 12,
     width: "80%",
+    backgroundColor: "#0EA5E9",
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   btnText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 
+  /* Sections */
+
   section: {
-    paddingHorizontal: 25,
-    marginTop: 30,
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1E293B",
-    marginBottom: 15,
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0F766E",
+    marginBottom: 12,
   },
 
   feature: {
     fontSize: 15,
     color: "#334155",
-    marginBottom: 10,
+    marginBottom: 8,
     lineHeight: 22,
   },
+
+  /* About */
 
   aboutText: {
     fontSize: 15,
     color: "#475569",
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 22,
   },
 
   teamTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#1E293B",
+    fontWeight: "700",
+    color: "#0F766E",
+    marginBottom: 8,
   },
 
   member: {
     fontSize: 15,
     color: "#334155",
-    marginBottom: 5,
+    marginBottom: 4,
   },
 
+  /* Footer */
+
   footer: {
-    marginTop: 40,
     alignItems: "center",
-    paddingBottom: 30,
+    marginTop: 20,
+    marginBottom: 30,
   },
 
   footerText: {
-    color: "#94A3B8",
+    color: "#64748B",
+    fontSize: 14,
   },
+
 });
