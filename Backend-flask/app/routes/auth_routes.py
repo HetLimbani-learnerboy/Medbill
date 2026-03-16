@@ -21,30 +21,48 @@ def api_home():
 
 @auth_bp.route('/api/signup', methods=['POST'])
 def register():
-    data=request.get_json()
-    name=data.get('name')
-    email=data.get('email')
-    password=data.get('password')
-    if not name or not email or not password:
+    data = request.get_json()
+
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    phone_number = data.get('phonenumber')
+
+    # Check required fields
+    if not name or not email or not password or not phone_number:
         return jsonify({'message': 'All fields are required'}), 400
+
+    # Check email already exists
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'Email already registered'}), 400
-    new_user=User(
+
+    new_user = User(
         username=name,
-        email=email
+        email=email,
+        phone_number=phone_number
     )
+
     new_user.set_password(password)
+
     try:
         db.session.add(new_user)
         db.session.commit()
-        return jsonify({'message': 'User registered successfully'}), 201
+
+        return jsonify({
+            'message': 'User registered successfully'
+        }), 201
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Database error', 'error': str(e)}), 500
+        return jsonify({
+            'message': 'Database error',
+            'error': str(e)
+        }), 500
 
 @auth_bp.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
+
     email = data.get('email')
     password = data.get('password')
 
@@ -57,7 +75,9 @@ def login():
         return jsonify({'message': 'Invalid email or password'}), 401
 
     if not user.is_verified:
-        return jsonify({'message': 'Email not verified. Please verify your email before logging in.'}), 403
+        return jsonify({
+            'message': 'Email not verified. Please verify your email before logging in.'
+        }), 403
 
     return jsonify({
         'message': 'Login successful',
@@ -65,6 +85,7 @@ def login():
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'phone_number': user.phone_number,
             'role': user.role
         }
     }), 200
