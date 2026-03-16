@@ -10,14 +10,14 @@ import {
   Alert,
   ActivityIndicator
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useAuth } from "./AuthContext";
 
 const API_URL = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
 
 const SignIn: React.FC = () => {
-
-  const navigation: any = useNavigation();
-
+  const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
@@ -27,7 +27,6 @@ const SignIn: React.FC = () => {
   });
 
   const handleSignIn = async () => {
-
     if (!formData.email || !formData.password) {
       Alert.alert("Error", "Please enter both email and password");
       return;
@@ -36,7 +35,6 @@ const SignIn: React.FC = () => {
     setLoading(true);
 
     try {
-
       const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: {
@@ -53,8 +51,9 @@ const SignIn: React.FC = () => {
       setLoading(false);
 
       if (response.ok) {
-        Alert.alert("Success", "Login successful");
-        navigation.navigate("index");
+        login();
+        Alert.alert("Success", "Login successful")
+        router.replace('/tabs')
       } else {
         Alert.alert("Login Failed", data.message || "Invalid credentials");
       }
@@ -63,7 +62,6 @@ const SignIn: React.FC = () => {
       setLoading(false);
       Alert.alert("Server Error", "Please try again later");
     }
-
   };
 
   return (
@@ -83,7 +81,6 @@ const SignIn: React.FC = () => {
       />
 
       <View style={styles.passwordWrapper}>
-
         <TextInput
           placeholder="Password"
           style={styles.passwordInput}
@@ -106,7 +103,6 @@ const SignIn: React.FC = () => {
             style={styles.eye}
           />
         </TouchableOpacity>
-
       </View>
 
       <TouchableOpacity
@@ -121,12 +117,20 @@ const SignIn: React.FC = () => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => alert("Forgot Password functionality is not implemented yet")}>
+      <TouchableOpacity
+        onPress={() =>
+          Alert.alert("Info", "Forgot Password not implemented yet")
+        }
+      >
         <Text style={styles.linkText}>Forgot Password?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-        <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
+      <TouchableOpacity
+        onPress={() => router.push("/SignUp")}
+      >
+        <Text style={styles.linkText}>
+          Don't have an account? Sign Up
+        </Text>
       </TouchableOpacity>
 
     </ScrollView>
