@@ -26,42 +26,47 @@ const SignIn: React.FC = () => {
     password: ""
   });
 
+  // const handleSignIn = async () => {
+  //   if (!formData.email || !formData.password) {
+  //     Alert.alert("Error", "Please enter both email and password");
+  //     return;
+  //   }
+
+  //   setLoading(true);
+
+  //   try {
+  //     const response = await fetch(`${API_URL}/login`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json"
+  //       },
+  //       body: JSON.stringify({
+  //         email: formData.email,
+  //         password: formData.password
+  //       })
+  //     });
+
+  //     const data = await response.json();
+
+  //     setLoading(false);
+
+  //     if (response.ok) {
+  //       login();
+  //       Alert.alert("Success", "Login successful")
+  //       router.replace('/tabs')
+  //     } else {
+  //       Alert.alert("Login Failed", data.message || "Invalid credentials");
+  //     }
+
+  //   } catch (error) {
+  //     setLoading(false);
+  //     Alert.alert("Server Error", "Please try again later");
+  //   }
+  // };
+
+
   const handleSignIn = async () => {
-    if (!formData.email || !formData.password) {
-      Alert.alert("Error", "Please enter both email and password");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
-
-      const data = await response.json();
-
-      setLoading(false);
-
-      if (response.ok) {
-        login();
-        Alert.alert("Success", "Login successful")
-        router.replace('/tabs')
-      } else {
-        Alert.alert("Login Failed", data.message || "Invalid credentials");
-      }
-
-    } catch (error) {
-      setLoading(false);
-      Alert.alert("Server Error", "Please try again later");
-    }
+    router.replace('/tabs')
   };
 
   return (
