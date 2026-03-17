@@ -59,6 +59,35 @@ def create_receipt():
         db.session.rollback()
         return jsonify({"message": "DB error", "error": str(e)}), 500
     
+    
+@receipt_bp.route("/api/receipts/check-user", methods=["GET"])
+def check_user():
+    phone = request.args.get('phone')
+    email = request.args.get('email')
+
+    receipt = None
+
+    if phone:
+        receipt = Receipt.query.filter_by(phone_number=phone)\
+            .order_by(Receipt.created_at.desc())\
+            .first()
+
+    elif email:
+        receipt = Receipt.query.filter_by(email=email)\
+            .order_by(Receipt.created_at.desc())\
+            .first()
+
+    if receipt:
+        return jsonify({
+            "exists": True,
+            "customer_name": receipt.customer_name,
+            "email": receipt.email,
+            "phone_number": receipt.phone_number
+        }), 200
+
+    return jsonify({"exists": False}), 200
+
+    
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
 
