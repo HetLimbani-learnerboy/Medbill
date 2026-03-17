@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { CartProvider } from "./CartContext";
 
 function RootLayoutNav() {
   const { isLoggedIn } = useAuth();
@@ -22,7 +23,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <CartProvider>
       <RootLayoutNav />
+      </CartProvider>
     </AuthProvider>
   );
 }
