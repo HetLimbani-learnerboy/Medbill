@@ -3,13 +3,11 @@ from app.models.user_model import User
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from email.message import EmailMessage
-import smtplib
-import os
-import random
+
 
 auth_bp = Blueprint('auth', __name__)
 
-# Temporary OTP storage
+
 otp_store = {}
 
 @auth_bp.route('/api',methods=['GET'])

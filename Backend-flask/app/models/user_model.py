@@ -1,6 +1,7 @@
 from app import db
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(db.Model):
     __tablename__ = "users"
@@ -18,3 +19,4 @@ class User(db.Model):
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
+    
