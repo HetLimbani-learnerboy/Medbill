@@ -1,5 +1,5 @@
+import { AntDesign, FontAwesome6, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Ionicons, AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   return (
@@ -25,6 +25,16 @@ export default function TabLayout() {
           title: "Receipts",
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="file-document-multiple" size={28} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="inventory" 
+        options={{
+          title: "Inventory",
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="warehouse" size={28} color={color} />
           ),
         }}
       />
