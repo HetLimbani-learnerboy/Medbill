@@ -485,7 +485,7 @@ export default function InventoryScreen() {
   // ➕ ADD ITEM
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.price || !newItem.quantity) {
-      Alert.alert("Missing Fields", "Please enter name, price, and quantity");
+      Alert.alert("Missing Fields", "Please enter all the fields");
       return;
     }
 
@@ -506,7 +506,7 @@ export default function InventoryScreen() {
         setAddModalVisible(false);
         setNewItem({ name: '', company: '', price: '', quantity: '' });
       } else {
-        Alert.alert("Error", "Failed to add medicine to inventory");
+        Alert.alert("Error", "Medicine already exists in stock and update the existing record instead or Failed to add medicine to inventory");
       }
     } catch (error) {
       Alert.alert("Network Error", "Check your backend connection");
