@@ -13,7 +13,7 @@
 //   product?: { product_name?: string; };
 // }
 
-// export default function Index() {
+// export default function Index() 
 //   const [permission, requestPermission] = useCameraPermissions();
 //   const [zoom, setZoom] = useState<number>(0);
 //   const [scannedItem, setScannedItem] = useState<string | null>(null);
