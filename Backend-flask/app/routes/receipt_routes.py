@@ -5,6 +5,28 @@ from sqlalchemy.exc import SQLAlchemyError
 
 receipt_bp = Blueprint("receipt_bp", __name__)
 
+from flask import Blueprint, jsonify
+from app.models.medicine_model import Medicine
+
+@medicine_bp.route("/api/inventory", methods=["GET"])
+def get_all_medicines():
+    medicines = Medicine.query.all()
+
+    result = []
+
+    for med in medicines:
+        result.append({
+            "medicine_id": med.medicine_id,
+            "medicine_name": med.medicine_name,
+            "company": med.company,
+            "price": med.price,
+            "quantity": med.quantity,  # 👈 will show 0 if zero
+            "stock_status": "Out of Stock" if med.quantity == 0 else "In Stock",
+            "expiry_date": str(med.expiry_date),
+            "created_at": str(med.created_at)
+        })
+
+    return jsonify(result), 200
 
 @receipt_bp.route("/api/receipts", methods=["POST"])
 def create_receipt():
