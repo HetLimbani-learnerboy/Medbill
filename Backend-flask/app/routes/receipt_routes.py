@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import Receipt, ReceiptItem
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, func
 from datetime import datetime
 
 
@@ -89,6 +89,38 @@ def check_user():
 
     return jsonify({"exists": False}), 200
 
+@receipt_bp.route("/api/analytics/total-revenue", methods=["GET"])
+def total_revenue():
+    receipts = Receipt.query.all()
+
+    total = sum(r.total_amount for r in receipts)
+
+    return jsonify({
+        "total_revenue": total,
+        "total_receipts": len(receipts)
+    }), 200
+    
+
+@receipt_bp.route("/api/analytics/top-medicines", methods=["GET"])
+def top_medicines():
+    data = db.session.query(
+        ReceiptItem.medicine_name,
+        func.sum(ReceiptItem.quantity).label("total_sold")
+    ).group_by(ReceiptItem.medicine_name)\
+     .order_by(func.sum(ReceiptItem.quantity).desc())\
+     .limit(5).all()
+
+    result = [
+        {
+            "medicine_name": item[0],
+            "total_sold": item[1]
+        }
+        for item in data
+    ]
+
+    return jsonify(result), 200
+
+
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
     receipts = Receipt.query.all()
@@ -135,6 +167,20 @@ def get_receipts():
 
     return jsonify(result), 200
 
+@receipt_bp.route("/api/analytics/daily-revenue", methods=["GET"])
+def daily_revenue():
+    data = db.session.query(
+        func.date(Receipt.created_at),
+        func.sum(Receipt.total_amount)
+    ).group_by(func.date(Receipt.created_at)).all()
+
+    return jsonify([
+        {
+            "date": str(d[0]),
+            "revenue": d[1]
+        }
+        for d in data
+    ])
     
 @receipt_bp.route("/api/receipts/<string:receipt_id>", methods=["GET"])
 def get_single_receipt(receipt_id):

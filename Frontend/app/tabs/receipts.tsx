@@ -25,10 +25,18 @@ interface Receipt {
   customerEmail: string;
   customerPhone: string;
   dateTime: string;
+
+  gst_percent: number;
+  gst_amount: number;
+  offer_percent: number;
+  offer_amount: number;
+
   billAmount: number;
+
   shopName: string;
   shopPhone: string;
   creatorName: string;
+
   items: Item[];
   payment: Payment;
 }
@@ -40,12 +48,11 @@ export default function ReceiptsDashboard() {
 
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
-  const shopPhone= localStorage.getItem("phone_number")|| "NA";
-  const shopName= localStorage.getItem("shopname")|| "NA";
-  const creatorName=localStorage.getItem("username")||"NA";
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
+  // ✅ FETCH ALL
   const fetchReceipts = async () => {
     try {
       setLoading(true);
@@ -59,6 +66,7 @@ export default function ReceiptsDashboard() {
     }
   };
 
+  // ✅ FETCH SINGLE
   const fetchReceiptById = async (id: string) => {
     try {
       const res = await fetch(`${API_URL}/${id}`);
@@ -74,30 +82,11 @@ export default function ReceiptsDashboard() {
     fetchReceipts();
   }, []);
 
-
-  const renderHeader = () => (
-    <View style={styles.statsContainer}>
-      <Text style={styles.sectionTitle}>This Month's Overview</Text>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Ionicons name="receipt-outline" size={24} color="#0F766E" />
-          <Text style={styles.statValue}>342</Text>
-          <Text style={styles.statLabel}>Bills Generated</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="wallet-outline" size={24} color="#0F766E" />
-          <Text style={styles.statValue}>₹45,200</Text>
-          <Text style={styles.statLabel}>Total Revenue</Text>
-        </View>
-      </View>
-    </View>
-  );
-
   // --- LIST ITEM ---
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       style={styles.receiptCard}
-      onPress={() => fetchReceiptById(item.id)} // 🔥 IMPORTANT CHANGE
+      onPress={() => fetchReceiptById(item.id)}
       activeOpacity={0.7}
     >
       <View style={styles.receiptHeader}>
@@ -120,7 +109,6 @@ export default function ReceiptsDashboard() {
           data={receipts}
           keyExtractor={(item) => item.id}
           renderItem={renderReceiptItem}
-          ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -132,6 +120,7 @@ export default function ReceiptsDashboard() {
             {selectedReceipt && (
               <ScrollView>
 
+                {/* SHOP */}
                 <View style={styles.modalHeader}>
                   <Text style={styles.shopName}>{selectedReceipt.shopName}</Text>
                   <Text style={styles.subText}>Phone: {selectedReceipt.shopPhone}</Text>
@@ -140,6 +129,7 @@ export default function ReceiptsDashboard() {
 
                 <View style={styles.divider} />
 
+                {/* CUSTOMER */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Customer Details</Text>
                   <Text style={styles.detailText}>Name: {selectedReceipt.customerName}</Text>
@@ -149,8 +139,10 @@ export default function ReceiptsDashboard() {
 
                 <View style={styles.divider} />
 
+                {/* ITEMS */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Items Purchased</Text>
+
                   {selectedReceipt.items.map((item, index) => (
                     <View key={index} style={styles.itemRow}>
                       <View style={{ flex: 2 }}>
@@ -163,14 +155,32 @@ export default function ReceiptsDashboard() {
                     </View>
                   ))}
 
+                  <View style={styles.taxContainer}>
+                    <View style={styles.taxRow}>
+                      <Text style={styles.detailText}>GST ({selectedReceipt.gst_percent}%):</Text>
+                      <Text style={styles.detailText}>₹{selectedReceipt.gst_amount.toFixed(2)}</Text>
+                    </View>
+
+                    <View style={styles.taxRow}>
+                      <Text style={styles.detailText}>Offer ({selectedReceipt.offer_percent}%):</Text>
+                      <Text style={[styles.detailText, styles.offerText]}>
+                        -₹{selectedReceipt.offer_amount.toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* TOTAL */}
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Grand Total</Text>
-                    <Text style={styles.totalAmount}>₹{selectedReceipt.billAmount.toFixed(2)}</Text>
+                    <Text style={styles.totalAmount}>
+                      ₹{selectedReceipt.billAmount.toFixed(2)}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={styles.divider} />
 
+                {/* PAYMENT */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Payment Details</Text>
                   <Text style={styles.detailText}>Method: {selectedReceipt.payment?.method}</Text>
@@ -229,6 +239,25 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
   itemQty: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   itemTotal: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  // Container for the GST and Offer section
+  taxContainer: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6', // Lighter than the main divider for a subtle feel
+  },
+
+  // Specific style for the text rows (GST/Offer)
+  taxRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6
+  },
+
+  offerText: {
+    color: '#10B981',
+    fontWeight: '500'
+  },
 
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
   totalLabel: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
