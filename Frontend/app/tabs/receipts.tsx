@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, SafeAreaView, ScrollView, ActivityIndicator
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, SafeAreaView, ScrollView, ActivityIndicator, TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
@@ -51,7 +51,8 @@ export default function ReceiptsDashboard() {
   const [dailyRevenue, setDailyRevenue] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
@@ -104,6 +105,16 @@ export default function ReceiptsDashboard() {
     fetchAnalytics();
   }, []);
 
+  const filteredReceipts = useMemo(() => {
+    if (!searchQuery) return receipts;
+    const query = searchQuery.toLowerCase();
+    return receipts.filter((item) =>
+      item.customerName?.toLowerCase().includes(query) ||
+      item.customerPhone?.toLowerCase().includes(query) ||
+      item.billAmount.toString().includes(query)
+    );
+  }, [searchQuery, receipts]);
+
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       style={styles.receiptCard}
@@ -122,6 +133,7 @@ export default function ReceiptsDashboard() {
   );
 
   const renderHeader = () => (
+
     <View style={{ marginBottom: 20 }}>
       {/* TOP CARDS */}
       <View style={styles.topRow}>
@@ -164,36 +176,45 @@ export default function ReceiptsDashboard() {
         </View>
       )}
 
-      {/* TOP MEDICINES */}
-      <View style={[styles.section, { paddingHorizontal: 10 }]}>
-        <Text style={styles.sectionHeading}>Top Medicines</Text>
-        {topMedicines.map((item, index) => (
-          <View key={index} style={styles.medicineRow}>
-            <Text style={styles.itemName}>{item.medicine_name}</Text>
-            <Text style={{ color: '#0F766E', fontWeight: '600' }}>
-              {item.total_sold} sold
-            </Text>
-          </View>
-        ))}
-      </View>
-
       <Text style={[styles.sectionHeading, { marginLeft: 10, marginTop: 10 }]}>Recent Receipts</Text>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.searchContainerOuter}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search by name, phone or amount..."
+            placeholderTextColor="#9CA3AF"
+            style={styles.searchInput}
+            value={searchInput}
+            onChangeText={setSearchInput}
+            returnKeyType="search"
+            onSubmitEditing={() => setSearchQuery(searchInput)} // Trigger on keyboard 'Search'
+          />
+          <TouchableOpacity onPress={() => setSearchQuery(searchInput)}>
+            <Ionicons name="search" size={20} color="#0F766E" />
+          </TouchableOpacity>
+          {searchInput.length > 0 && (
+            <TouchableOpacity onPress={() => { setSearchInput(''); setSearchQuery(''); }}>
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <ActivityIndicator size="large" color="#0F766E" />
         </View>
       ) : (
         <FlatList
-          data={receipts}
+          data={filteredReceipts}
           keyExtractor={(item) => item.id}
           renderItem={renderReceiptItem}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader} 
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled" 
         />
       )}
 
@@ -282,7 +303,29 @@ export default function ReceiptsDashboard() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   listContent: { padding: 16 },
-
+  searchContainerOuter: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 50,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    height: '100%',
+  },
   statsContainer: { marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },

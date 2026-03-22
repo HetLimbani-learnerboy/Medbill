@@ -5,8 +5,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#2f95dc", 
-        headerShown: true,              
+        tabBarActiveTintColor: "#2f95dc",
+        headerShown: true,
       }}
     >
       <Tabs.Screen
@@ -20,17 +20,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="receipts" 
-        options={{
-          title: "Receipts",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="file-document-multiple" size={28} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="inventory" 
+        name="inventory"
         options={{
           title: "Inventory",
           tabBarIcon: ({ color }) => (
@@ -40,7 +30,17 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="insights" 
+        name="receipts"
+        options={{
+          title: "Receipts",
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="file-document-multiple" size={28} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="insights"
         options={{
           title: "Insights",
           tabBarIcon: ({ color }) => (
@@ -48,9 +48,19 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      <Tabs.Screen
+        name="preview"
+        options={{
+          title: "Preview",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="eye-outline" size={size || 28} color={color} />
+          ),
+        }}
+      />
 
       <Tabs.Screen
-        name="settings" 
+        name="settings"
         options={{
           title: "Settings",
           tabBarIcon: ({ color }) => (
