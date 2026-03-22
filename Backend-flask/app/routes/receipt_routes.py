@@ -89,7 +89,6 @@ def check_user():
 
     return jsonify({"exists": False}), 200
 
-    
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
     receipts = Receipt.query.all()
@@ -105,9 +104,14 @@ def get_receipts():
             "customerEmail": r.email,
             "customerPhone": r.phone_number,
             "dateTime": r.created_at.strftime("%d %b %Y, %I:%M %p"),
+
+            "gst_percent": r.gst_percent,
+            "gst_amount": r.gst_amount,
+            "offer_percent": r.offer_percent,
+            "offer_amount": r.offer_amount,
+
             "billAmount": r.total_amount,
 
-            # Static (you can make dynamic later)
             "shopName": "MedBill Pharmacy",
             "shopPhone": "+91 80000 11111",
             "creatorName": "Admin",
@@ -129,14 +133,15 @@ def get_receipts():
             }
         })
 
-    return jsonify(result)
+    return jsonify(result), 200
 
-@receipt_bp.route("/api/receipts/<receipt_id>", methods=["GET"])
+    
+@receipt_bp.route("/api/receipts/<string:receipt_id>", methods=["GET"])
 def get_single_receipt(receipt_id):
     r = Receipt.query.filter_by(receipt_id=receipt_id).first()
 
     if not r:
-        return jsonify({"message": "Not found"}), 404
+        return jsonify({"message": "Receipt not found"}), 404
 
     items = ReceiptItem.query.filter_by(receipt_id=r.receipt_id).all()
 
@@ -145,7 +150,19 @@ def get_single_receipt(receipt_id):
         "customerName": r.customer_name,
         "customerEmail": r.email,
         "customerPhone": r.phone_number,
+        "dateTime": r.created_at.strftime("%d %b %Y, %I:%M %p"),
+
+        "gst_percent": r.gst_percent,
+        "gst_amount": r.gst_amount,
+        "offer_percent": r.offer_percent,
+        "offer_amount": r.offer_amount,
+
         "billAmount": r.total_amount,
+
+        "shopName": "MedBill Pharmacy",
+        "shopPhone": "+91 80000 11111",
+        "creatorName": "Admin",
+
         "items": [
             {
                 "name": i.medicine_name,
@@ -153,8 +170,15 @@ def get_single_receipt(receipt_id):
                 "pricePerUnit": i.medicine_price,
                 "total": i.total_price
             } for i in items
-        ]
-    })
+        ],
+
+        "payment": {
+            "method": "UPI",
+            "transactionId": "AUTO-" + r.receipt_id,
+            "customerId": r.email or "N/A",
+            "time": r.created_at.strftime("%d %b %Y, %I:%M %p")
+        }
+    }), 200
 
 @receipt_bp.route("/api/receipts/<receipt_id>", methods=["DELETE"])
 def delete_receipt(receipt_id):
