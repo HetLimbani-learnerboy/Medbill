@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, SafeAreaView, ScrollView
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, SafeAreaView, ScrollView, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LineChart } from "react-native-chart-kit";
+import { Dimensions } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
 
 // --- Interfaces ---
 interface Item {
@@ -25,34 +29,52 @@ interface Receipt {
   customerEmail: string;
   customerPhone: string;
   dateTime: string;
-
   gst_percent: number;
   gst_amount: number;
   offer_percent: number;
   offer_amount: number;
-
   billAmount: number;
-
   shopName: string;
   shopPhone: string;
   creatorName: string;
-
   items: Item[];
   payment: Payment;
 }
 
 export default function ReceiptsDashboard() {
-
   const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
   const API_URL = `${BASE_URL}/api/receipts`;
 
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalReceipts, setTotalReceipts] = useState(0);
+  const [topMedicines, setTopMedicines] = useState<any[]>([]);
+  const [dailyRevenue, setDailyRevenue] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
-  // ✅ FETCH ALL
+  const fetchAnalytics = async () => {
+    try {
+      const revenueRes = await fetch(`${BASE_URL}/api/analytics/total-revenue`);
+      const revenueData = await revenueRes.json();
+
+      const topRes = await fetch(`${BASE_URL}/api/analytics/top-medicines`);
+      const topData = await topRes.json();
+
+      const dailyRes = await fetch(`${BASE_URL}/api/analytics/daily-revenue`);
+      const dailyData = await dailyRes.json();
+
+      setTotalRevenue(revenueData.total_revenue);
+      setTotalReceipts(revenueData.total_receipts);
+      setTopMedicines(topData);
+      setDailyRevenue(dailyData);
+    } catch (e) {
+      console.log("Analytics Error:", e);
+    }
+  };
+
   const fetchReceipts = async () => {
     try {
       setLoading(true);
@@ -60,13 +82,12 @@ export default function ReceiptsDashboard() {
       const data = await res.json();
       setReceipts(data);
     } catch (e) {
-      console.log(e);
+      console.log("Receipts Error:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FETCH SINGLE
   const fetchReceiptById = async (id: string) => {
     try {
       const res = await fetch(`${API_URL}/${id}`);
@@ -74,15 +95,15 @@ export default function ReceiptsDashboard() {
       setSelectedReceipt(data);
       setModalVisible(true);
     } catch (e) {
-      console.log(e);
+      console.log("Single Receipt Error:", e);
     }
   };
 
   useEffect(() => {
     fetchReceipts();
+    fetchAnalytics();
   }, []);
 
-  // --- LIST ITEM ---
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       style={styles.receiptCard}
@@ -100,15 +121,78 @@ export default function ReceiptsDashboard() {
     </TouchableOpacity>
   );
 
+  const renderHeader = () => (
+    <View style={{ marginBottom: 20 }}>
+      {/* TOP CARDS */}
+      <View style={styles.topRow}>
+        <View style={styles.card}>
+          <Ionicons name="wallet-outline" size={22} color="#0F766E" />
+          <Text style={styles.cardValue}>₹{totalRevenue.toFixed(2)}</Text>
+          <Text style={styles.cardLabel}>Revenue</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Ionicons name="receipt-outline" size={22} color="#0F766E" />
+          <Text style={styles.cardValue}>{totalReceipts}</Text>
+          <Text style={styles.cardLabel}>Bills</Text>
+        </View>
+      </View>
+
+      {/* REVENUE CHART */}
+      {dailyRevenue.length > 0 && (
+        <View style={{ paddingHorizontal: 5, marginBottom: 20 }}>
+          <Text style={[styles.sectionHeading, { marginLeft: 10 }]}>Revenue Trend</Text>
+          <LineChart
+            data={{
+              labels: dailyRevenue.map((d) => d.date.slice(5)), // MM-DD
+              datasets: [{ data: dailyRevenue.map((d) => d.revenue) }]
+            }}
+            width={screenWidth - 42}
+            height={180}
+            chartConfig={{
+              backgroundColor: "#fff",
+              backgroundGradientFrom: "#fff",
+              backgroundGradientTo: "#fff",
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(15, 118, 110, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+              propsForDots: { r: "4", strokeWidth: "2", stroke: "#0F766E" }
+            }}
+            bezier
+            style={{ borderRadius: 12, marginVertical: 8 }}
+          />
+        </View>
+      )}
+
+      {/* TOP MEDICINES */}
+      <View style={[styles.section, { paddingHorizontal: 10 }]}>
+        <Text style={styles.sectionHeading}>Top Medicines</Text>
+        {topMedicines.map((item, index) => (
+          <View key={index} style={styles.medicineRow}>
+            <Text style={styles.itemName}>{item.medicine_name}</Text>
+            <Text style={{ color: '#0F766E', fontWeight: '600' }}>
+              {item.total_sold} sold
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={[styles.sectionHeading, { marginLeft: 10, marginTop: 10 }]}>Recent Receipts</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {loading ? (
-        <Text style={{ textAlign: 'center', marginTop: 50 }}>Loading...</Text>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#0F766E" />
+        </View>
       ) : (
         <FlatList
           data={receipts}
           keyExtractor={(item) => item.id}
           renderItem={renderReceiptItem}
+          ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -118,9 +202,7 @@ export default function ReceiptsDashboard() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {selectedReceipt && (
-              <ScrollView>
-
-                {/* SHOP */}
+              <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.shopName}>{selectedReceipt.shopName}</Text>
                   <Text style={styles.subText}>Phone: {selectedReceipt.shopPhone}</Text>
@@ -129,7 +211,6 @@ export default function ReceiptsDashboard() {
 
                 <View style={styles.divider} />
 
-                {/* CUSTOMER */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Customer Details</Text>
                   <Text style={styles.detailText}>Name: {selectedReceipt.customerName}</Text>
@@ -139,10 +220,8 @@ export default function ReceiptsDashboard() {
 
                 <View style={styles.divider} />
 
-                {/* ITEMS */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Items Purchased</Text>
-
                   {selectedReceipt.items.map((item, index) => (
                     <View key={index} style={styles.itemRow}>
                       <View style={{ flex: 2 }}>
@@ -160,7 +239,6 @@ export default function ReceiptsDashboard() {
                       <Text style={styles.detailText}>GST ({selectedReceipt.gst_percent}%):</Text>
                       <Text style={styles.detailText}>₹{selectedReceipt.gst_amount.toFixed(2)}</Text>
                     </View>
-
                     <View style={styles.taxRow}>
                       <Text style={styles.detailText}>Offer ({selectedReceipt.offer_percent}%):</Text>
                       <Text style={[styles.detailText, styles.offerText]}>
@@ -169,7 +247,6 @@ export default function ReceiptsDashboard() {
                     </View>
                   </View>
 
-                  {/* TOTAL */}
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Grand Total</Text>
                     <Text style={styles.totalAmount}>
@@ -180,12 +257,10 @@ export default function ReceiptsDashboard() {
 
                 <View style={styles.divider} />
 
-                {/* PAYMENT */}
                 <View style={styles.section}>
                   <Text style={styles.sectionHeading}>Payment Details</Text>
                   <Text style={styles.detailText}>Method: {selectedReceipt.payment?.method}</Text>
                   <Text style={styles.detailText}>Txn ID: {selectedReceipt.payment?.transactionId}</Text>
-                  <Text style={styles.detailText}>A/C: {selectedReceipt.payment?.customerId}</Text>
                   <Text style={styles.detailText}>Time: {selectedReceipt.payment?.time}</Text>
                 </View>
 
@@ -195,7 +270,6 @@ export default function ReceiptsDashboard() {
                 >
                   <Text style={styles.closeButtonText}>Close Receipt</Text>
                 </TouchableOpacity>
-
               </ScrollView>
             )}
           </View>
@@ -239,30 +313,61 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
   itemQty: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   itemTotal: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  // Container for the GST and Offer section
   taxContainer: {
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6', // Lighter than the main divider for a subtle feel
+    borderTopColor: '#F3F4F6',
   },
-
-  // Specific style for the text rows (GST/Offer)
   taxRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 6
   },
-
   offerText: {
     color: '#10B981',
     fontWeight: '500'
   },
-
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
   totalLabel: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
   totalAmount: { fontSize: 18, fontWeight: 'bold', color: '#0F766E' },
 
   closeButton: { backgroundColor: '#0F766E', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24, marginBottom: 12 },
-  closeButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' }
+  closeButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 16
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 12,
+    marginHorizontal: 5,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4
+  },
+  cardValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 6,
+    color: '#111827'
+  },
+  cardLabel: {
+    fontSize: 12,
+    color: '#6B7280'
+  },
+  medicineRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    elevation: 1
+  }
 });
