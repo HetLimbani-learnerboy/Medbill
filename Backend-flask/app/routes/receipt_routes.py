@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import Receipt, ReceiptItem
-from sqlalchemy.exc import SQLAlchemyError, func
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 from datetime import datetime
 
 
@@ -91,13 +92,14 @@ def check_user():
 
 @receipt_bp.route("/api/analytics/total-revenue", methods=["GET"])
 def total_revenue():
-    receipts = Receipt.query.all()
-
-    total = sum(r.total_amount for r in receipts)
+    stats = db.session.query(
+        func.sum(Receipt.total_amount).label("total"),
+        func.count(Receipt.id).label("count")
+    ).first()
 
     return jsonify({
-        "total_revenue": total,
-        "total_receipts": len(receipts)
+        "total_revenue": float(stats.total or 0),
+        "total_receipts": stats.count or 0
     }), 200
     
 
@@ -112,15 +114,31 @@ def top_medicines():
 
     result = [
         {
-            "medicine_name": item[0],
-            "total_sold": item[1]
+            "medicine_name": item.medicine_name,
+            "total_sold": int(item.total_sold or 0)
         }
         for item in data
     ]
 
     return jsonify(result), 200
 
+@receipt_bp.route("/api/analytics/daily-revenue", methods=["GET"])
+def daily_revenue():
+    data = db.session.query(
+        func.date(Receipt.created_at).label("date"),
+        func.sum(Receipt.total_amount).label("revenue")
+    ).group_by(func.date(Receipt.created_at))\
+     .order_by(func.date(Receipt.created_at).asc())\
+     .all()
 
+    return jsonify([
+        {
+            "date": str(d.date),
+            "revenue": float(d.revenue or 0)
+        }
+        for d in data
+    ]), 200
+    
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
     receipts = Receipt.query.all()
