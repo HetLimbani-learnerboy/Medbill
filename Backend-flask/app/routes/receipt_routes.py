@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
-from app.models import Receipt, ReceiptItem
+from app.models import Receipt, ReceiptItem, Medicine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from datetime import datetime
@@ -8,19 +8,33 @@ from datetime import datetime
 
 receipt_bp = Blueprint("receipt_bp", __name__)
 
-
 @receipt_bp.route("/api/receipts", methods=["POST"])
 def create_receipt():
     data = request.get_json()
 
     customer_name = data.get("customer_name")
-    total_amount = data.get("total_amount")
     items = data.get("items", [])
 
     if not customer_name or not items:
         return jsonify({"message": "Customer name and items required"}), 400
 
     try:
+        for item in items:
+            name = item.get("name")
+            qty = int(item.get("quantity", 1))
+
+            medicine = Medicine.query.filter_by(medicine_name=name).first()
+
+            if not medicine:
+                return jsonify({
+                    "message": f"{name} not found. Please add it to inventory first"
+                }), 400
+
+            if medicine.quantity < qty:
+                return jsonify({
+                    "message": f"Insufficient stock for {name}. Available: {medicine.quantity}"
+                }), 400
+
         new_receipt = Receipt(
             customer_name=customer_name,
             email=data.get("email"),
@@ -30,23 +44,27 @@ def create_receipt():
             gst_amount=float(data.get("gst_amount", 0)),
             offer_percent=float(data.get("offer_percent", 0)),
             offer_amount=float(data.get("offer_amount", 0)),
-            total_amount=float(total_amount)
+            total_amount=float(data.get("total_amount", 0))
         )
 
         db.session.add(new_receipt)
         db.session.flush()
 
-        # Add items
         for item in items:
+            name = item.get("name")
             price = float(item.get("price", 0))
             qty = int(item.get("quantity", 1))
 
+            medicine = Medicine.query.filter_by(medicine_name=name).first()
+
+            medicine.quantity -= qty
+
             new_item = ReceiptItem(
                 receipt_id=new_receipt.receipt_id,
-                medicine_name=item.get("name"),
+                medicine_name=name,
                 medicine_price=price,
                 quantity=qty,
-                total_price=price * qty  
+                total_price=price * qty
             )
 
             db.session.add(new_item)
@@ -60,7 +78,10 @@ def create_receipt():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"message": "DB error", "error": str(e)}), 500
+        return jsonify({
+            "message": "Database error",
+            "error": str(e)
+        }), 500
     
 @receipt_bp.route("/api/receipts/check-user", methods=["GET"])
 def check_user():

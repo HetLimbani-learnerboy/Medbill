@@ -383,8 +383,6 @@ import {
     ActivityIndicator
 } from 'react-native';
 
-// 🔥 IMPORTANT: Set your IP address here (e.g., http://192.168.1.5:5000/api)
-// Do not use 'localhost' if testing on a physical device.
 const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const API_URL = `${BASE_URL}/api`;
 
@@ -401,7 +399,6 @@ export default function InventoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Modal States
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [editQuantity, setEditQuantity] = useState('');
@@ -411,7 +408,6 @@ export default function InventoryScreen() {
     name: '', company: '', price: '', quantity: ''
   });
 
-  // ✅ FETCH DATA
   const fetchInventory = async () => {
     try {
       setIsLoading(true);
@@ -419,7 +415,7 @@ export default function InventoryScreen() {
       const data = await res.json();
 
       const mapped = data.map((m: any) => ({
-        id: m.medicine_id.toString(), // Ensure ID is a string for FlatList
+        id: m.medicine_id.toString(), 
         name: m.medicine_name,
         company: m.company,
         price: m.price,
@@ -439,7 +435,6 @@ export default function InventoryScreen() {
     fetchInventory();
   }, []);
 
-  // 🔍 SEARCH LOGIC
   const filteredInventory = useMemo(() => {
     if (!searchQuery.trim()) return inventory;
     return inventory.filter(item =>
@@ -448,14 +443,12 @@ export default function InventoryScreen() {
     );
   }, [searchQuery, inventory]);
 
-  // ✏️ OPEN EDIT
   const openEditModal = (item: InventoryItem) => {
     setSelectedItem(item);
     setEditQuantity(item.quantity.toString());
     setModalVisible(true);
   };
 
-  // ✅ UPDATE STOCK
   const handleSaveQuantity = async () => {
     if (!selectedItem) return;
     const qty = parseInt(editQuantity, 10);
@@ -482,7 +475,6 @@ export default function InventoryScreen() {
     }
   };
 
-  // ➕ ADD ITEM
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.price || !newItem.quantity) {
       Alert.alert("Missing Fields", "Please enter all the fields");
@@ -570,7 +562,6 @@ export default function InventoryScreen() {
         <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>
 
-      {/* EDIT MODAL */}
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -603,7 +594,6 @@ export default function InventoryScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ADD MODAL */}
       <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
