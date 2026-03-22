@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import Receipt, ReceiptItem
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
+
 
 receipt_bp = Blueprint("receipt_bp", __name__)
 
@@ -90,50 +92,68 @@ def check_user():
     
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
+    receipts = Receipt.query.all()
 
-    receipts = Receipt.query.order_by(Receipt.created_at.desc()).all()
+    result = []
 
-    data = []
+    for r in receipts:
+        items = ReceiptItem.query.filter_by(receipt_id=r.receipt_id).all()
 
-    for receipt in receipts:
-        data.append({
-            "receipt_id": receipt.receipt_id,
-            "customer_name": receipt.customer_name,
-            "total_amount": receipt.total_amount,
-            "created_at": receipt.created_at
+        result.append({
+            "id": r.receipt_id,
+            "customerName": r.customer_name,
+            "customerEmail": r.email,
+            "customerPhone": r.phone_number,
+            "dateTime": r.created_at.strftime("%d %b %Y, %I:%M %p"),
+            "billAmount": r.total_amount,
+
+            # Static (you can make dynamic later)
+            "shopName": "MedBill Pharmacy",
+            "shopPhone": "+91 80000 11111",
+            "creatorName": "Admin",
+
+            "items": [
+                {
+                    "name": i.medicine_name,
+                    "qty": i.quantity,
+                    "pricePerUnit": i.medicine_price,
+                    "total": i.total_price
+                } for i in items
+            ],
+
+            "payment": {
+                "method": "UPI",
+                "transactionId": "AUTO-" + r.receipt_id,
+                "customerId": r.email or "N/A",
+                "time": r.created_at.strftime("%d %b %Y, %I:%M %p")
+            }
         })
 
-    return jsonify(data)
+    return jsonify(result)
 
 @receipt_bp.route("/api/receipts/<receipt_id>", methods=["GET"])
-def get_receipt(receipt_id):
+def get_single_receipt(receipt_id):
+    r = Receipt.query.filter_by(receipt_id=receipt_id).first()
 
-    receipt = Receipt.query.filter_by(receipt_id=receipt_id).first()
+    if not r:
+        return jsonify({"message": "Not found"}), 404
 
-    if not receipt:
-        return jsonify({"message": "Receipt not found"}), 404
-
-    items = []
-
-    for item in receipt.items:
-        items.append({
-            "medicine_name": item.medicine_name,
-            "price": item.medicine_price,
-            "quantity": item.quantity,
-            "total_price": item.total_price
-        })
+    items = ReceiptItem.query.filter_by(receipt_id=r.receipt_id).all()
 
     return jsonify({
-        "receipt_id": receipt.receipt_id,
-        "customer_name": receipt.customer_name,
-        "email": receipt.email,
-        "phone_number": receipt.phone_number,
-        "subtotal": receipt.subtotal,
-        "gst_amount": receipt.gst_amount,
-        "offer_amount": receipt.offer_amount,
-        "total_amount": receipt.total_amount,
-        "items": items,
-        "created_at": receipt.created_at
+        "id": r.receipt_id,
+        "customerName": r.customer_name,
+        "customerEmail": r.email,
+        "customerPhone": r.phone_number,
+        "billAmount": r.total_amount,
+        "items": [
+            {
+                "name": i.medicine_name,
+                "qty": i.quantity,
+                "pricePerUnit": i.medicine_price,
+                "total": i.total_price
+            } for i in items
+        ]
     })
 
 @receipt_bp.route("/api/receipts/<receipt_id>", methods=["DELETE"])
