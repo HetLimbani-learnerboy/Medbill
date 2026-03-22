@@ -62,7 +62,6 @@ def create_receipt():
         db.session.rollback()
         return jsonify({"message": "DB error", "error": str(e)}), 500
     
-    
 @receipt_bp.route("/api/receipts/check-user", methods=["GET"])
 def check_user():
     phone = request.args.get('phone')
@@ -139,6 +138,7 @@ def daily_revenue():
         for d in data
     ]), 200
     
+    
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
     receipts = Receipt.query.all()
@@ -185,20 +185,6 @@ def get_receipts():
 
     return jsonify(result), 200
 
-@receipt_bp.route("/api/analytics/daily-revenue", methods=["GET"])
-def daily_revenue():
-    data = db.session.query(
-        func.date(Receipt.created_at),
-        func.sum(Receipt.total_amount)
-    ).group_by(func.date(Receipt.created_at)).all()
-
-    return jsonify([
-        {
-            "date": str(d[0]),
-            "revenue": d[1]
-        }
-        for d in data
-    ])
     
 @receipt_bp.route("/api/receipts/<string:receipt_id>", methods=["GET"])
 def get_single_receipt(receipt_id):
