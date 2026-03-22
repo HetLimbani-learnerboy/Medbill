@@ -1,7 +1,6 @@
 from .auth_routes import auth_bp
 from .receipt_routes import receipt_bp
 from .medicine_routes import medicine_bp
-
     
 def register_blueprints(app):
     app.register_blueprint(auth_bp)

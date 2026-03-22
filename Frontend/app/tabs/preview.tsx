@@ -135,21 +135,38 @@ export default function Preview() {
 
     try {
       setLoading(true);
+
       const res = await fetch(`${API_URL}/receipts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        Alert.alert("Success", "Order Confirmed! Your receipt and medicine details have been sent to your registered contact info. Thank you for choosing us!🎉", [
-          { text: "OK", onPress: () => { resetForm(); router.replace("/tabs"); } }
-        ]);
-      } else {
-        Alert.alert("Error", "Failed to save record");
+      const data = await res.json(); // 🔥 IMPORTANT
+
+      // ❌ BACKEND ERROR (medicine not found / stock issue)
+      if (!res.ok) {
+        Alert.alert("Error", data.message || "Something went wrong");
+        return;
       }
+
+      // ✅ SUCCESS
+      Alert.alert(
+        "Success 🎉",
+        `Receipt Created!\nID: ${data.receipt_id}`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              resetForm();
+              router.replace("/tabs");
+            }
+          }
+        ]
+      );
+
     } catch (err) {
-      Alert.alert("Server error", "Check your connection");
+      Alert.alert("Server Error", "Check your internet or backend");
     } finally {
       setLoading(false);
     }

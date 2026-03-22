@@ -1,23 +1,40 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
-from app.models import Receipt, ReceiptItem
+from app.models import Receipt, ReceiptItem, Medicine
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
+from datetime import datetime
+
 
 receipt_bp = Blueprint("receipt_bp", __name__)
-
 
 @receipt_bp.route("/api/receipts", methods=["POST"])
 def create_receipt():
     data = request.get_json()
 
     customer_name = data.get("customer_name")
-    total_amount = data.get("total_amount")
     items = data.get("items", [])
 
     if not customer_name or not items:
         return jsonify({"message": "Customer name and items required"}), 400
 
     try:
+        for item in items:
+            name = item.get("name")
+            qty = int(item.get("quantity", 1))
+
+            medicine = Medicine.query.filter_by(medicine_name=name).first()
+
+            if not medicine:
+                return jsonify({
+                    "message": f"{name} not found. Please add it to inventory first"
+                }), 400
+
+            if medicine.quantity < qty:
+                return jsonify({
+                    "message": f"Insufficient stock for {name}. Available: {medicine.quantity}"
+                }), 400
+
         new_receipt = Receipt(
             customer_name=customer_name,
             email=data.get("email"),
@@ -27,23 +44,27 @@ def create_receipt():
             gst_amount=float(data.get("gst_amount", 0)),
             offer_percent=float(data.get("offer_percent", 0)),
             offer_amount=float(data.get("offer_amount", 0)),
-            total_amount=float(total_amount)
+            total_amount=float(data.get("total_amount", 0))
         )
 
         db.session.add(new_receipt)
         db.session.flush()
 
-        # Add items
         for item in items:
+            name = item.get("name")
             price = float(item.get("price", 0))
             qty = int(item.get("quantity", 1))
 
+            medicine = Medicine.query.filter_by(medicine_name=name).first()
+
+            medicine.quantity -= qty
+
             new_item = ReceiptItem(
                 receipt_id=new_receipt.receipt_id,
-                medicine_name=item.get("name"),
+                medicine_name=name,
                 medicine_price=price,
                 quantity=qty,
-                total_price=price * qty  
+                total_price=price * qty
             )
 
             db.session.add(new_item)
@@ -57,8 +78,10 @@ def create_receipt():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"message": "DB error", "error": str(e)}), 500
-    
+        return jsonify({
+            "message": "Database error",
+            "error": str(e)
+        }), 500
     
 @receipt_bp.route("/api/receipts/check-user", methods=["GET"])
 def check_user():
@@ -87,54 +110,146 @@ def check_user():
 
     return jsonify({"exists": False}), 200
 
+@receipt_bp.route("/api/analytics/total-revenue", methods=["GET"])
+def total_revenue():
+    stats = db.session.query(
+        func.sum(Receipt.total_amount).label("total"),
+        func.count(Receipt.id).label("count")
+    ).first()
+
+    return jsonify({
+        "total_revenue": float(stats.total or 0),
+        "total_receipts": stats.count or 0
+    }), 200
+    
+
+@receipt_bp.route("/api/analytics/top-medicines", methods=["GET"])
+def top_medicines():
+    data = db.session.query(
+        ReceiptItem.medicine_name,
+        func.sum(ReceiptItem.quantity).label("total_sold")
+    ).group_by(ReceiptItem.medicine_name)\
+     .order_by(func.sum(ReceiptItem.quantity).desc())\
+     .limit(5).all()
+
+    result = [
+        {
+            "medicine_name": item.medicine_name,
+            "total_sold": int(item.total_sold or 0)
+        }
+        for item in data
+    ]
+
+    return jsonify(result), 200
+
+@receipt_bp.route("/api/analytics/daily-revenue", methods=["GET"])
+def daily_revenue():
+    data = db.session.query(
+        func.date(Receipt.created_at).label("date"),
+        func.sum(Receipt.total_amount).label("revenue")
+    ).group_by(func.date(Receipt.created_at))\
+     .order_by(func.date(Receipt.created_at).asc())\
+     .all()
+
+    return jsonify([
+        {
+            "date": str(d.date),
+            "revenue": float(d.revenue or 0)
+        }
+        for d in data
+    ]), 200
+    
     
 @receipt_bp.route("/api/receipts", methods=["GET"])
 def get_receipts():
+    receipts = Receipt.query.all()
 
-    receipts = Receipt.query.order_by(Receipt.created_at.desc()).all()
+    result = []
 
-    data = []
+    for r in receipts:
+        items = ReceiptItem.query.filter_by(receipt_id=r.receipt_id).all()
 
-    for receipt in receipts:
-        data.append({
-            "receipt_id": receipt.receipt_id,
-            "customer_name": receipt.customer_name,
-            "total_amount": receipt.total_amount,
-            "created_at": receipt.created_at
+        result.append({
+            "id": r.receipt_id,
+            "customerName": r.customer_name,
+            "customerEmail": r.email,
+            "customerPhone": r.phone_number,
+            "dateTime": r.created_at.strftime("%d %b %Y, %I:%M %p"),
+
+            "gst_percent": r.gst_percent,
+            "gst_amount": r.gst_amount,
+            "offer_percent": r.offer_percent,
+            "offer_amount": r.offer_amount,
+
+            "billAmount": r.total_amount,
+
+            "shopName": "MedBill Pharmacy",
+            "shopPhone": "+91 80000 11111",
+            "creatorName": "Admin",
+
+            "items": [
+                {
+                    "name": i.medicine_name,
+                    "qty": i.quantity,
+                    "pricePerUnit": i.medicine_price,
+                    "total": i.total_price
+                } for i in items
+            ],
+
+            "payment": {
+                "method": "UPI",
+                "transactionId": "AUTO-" + r.receipt_id,
+                "customerId": r.email or "N/A",
+                "time": r.created_at.strftime("%d %b %Y, %I:%M %p")
+            }
         })
 
-    return jsonify(data)
+    return jsonify(result), 200
 
-@receipt_bp.route("/api/receipts/<receipt_id>", methods=["GET"])
-def get_receipt(receipt_id):
+    
+@receipt_bp.route("/api/receipts/<string:receipt_id>", methods=["GET"])
+def get_single_receipt(receipt_id):
+    r = Receipt.query.filter_by(receipt_id=receipt_id).first()
 
-    receipt = Receipt.query.filter_by(receipt_id=receipt_id).first()
-
-    if not receipt:
+    if not r:
         return jsonify({"message": "Receipt not found"}), 404
 
-    items = []
-
-    for item in receipt.items:
-        items.append({
-            "medicine_name": item.medicine_name,
-            "price": item.medicine_price,
-            "quantity": item.quantity,
-            "total_price": item.total_price
-        })
+    items = ReceiptItem.query.filter_by(receipt_id=r.receipt_id).all()
 
     return jsonify({
-        "receipt_id": receipt.receipt_id,
-        "customer_name": receipt.customer_name,
-        "email": receipt.email,
-        "phone_number": receipt.phone_number,
-        "subtotal": receipt.subtotal,
-        "gst_amount": receipt.gst_amount,
-        "offer_amount": receipt.offer_amount,
-        "total_amount": receipt.total_amount,
-        "items": items,
-        "created_at": receipt.created_at
-    })
+        "id": r.receipt_id,
+        "customerName": r.customer_name,
+        "customerEmail": r.email,
+        "customerPhone": r.phone_number,
+        "dateTime": r.created_at.strftime("%d %b %Y, %I:%M %p"),
+
+        "gst_percent": r.gst_percent,
+        "gst_amount": r.gst_amount,
+        "offer_percent": r.offer_percent,
+        "offer_amount": r.offer_amount,
+
+        "billAmount": r.total_amount,
+
+        "shopName": "MedBill Pharmacy",
+        "shopPhone": "+91 80000 11111",
+        "creatorName": "Admin",
+
+        "items": [
+            {
+                "name": i.medicine_name,
+                "qty": i.quantity,
+                "pricePerUnit": i.medicine_price,
+                "total": i.total_price
+            } for i in items
+        ],
+
+        "payment": {
+            "method": "UPI",
+            "transactionId": "AUTO-" + r.receipt_id,
+            "customerId": r.email or "N/A",
+            "time": r.created_at.strftime("%d %b %Y, %I:%M %p")
+        }
+    }), 200
 
 @receipt_bp.route("/api/receipts/<receipt_id>", methods=["DELETE"])
 def delete_receipt(receipt_id):
