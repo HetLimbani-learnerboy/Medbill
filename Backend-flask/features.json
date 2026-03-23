@@ -1,0 +1,1 @@
+["drug_name", "facility_level", "lag_1", "lag_2", "lag_3", "lag_4", "lag_5", "lag_6", "lag_7", "lag_8", "roll_mean_4", "roll_std_4", "roll_min_4", "roll_max_4", "ewm_0.3", "trend", "diff_1", "diff_2", "quarter", "sin_1", "cos_1", "sin_2", "cos_2"]
