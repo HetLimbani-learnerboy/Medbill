@@ -1,7 +1,8 @@
 from flask import Flask, send_from_directory
 import os
+from app import create_app
 
-app = Flask(__name__, static_folder='dist')
+app = create_app()
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
