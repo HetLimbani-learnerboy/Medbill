@@ -4,6 +4,10 @@ from app import create_app
 
 app = create_app()
 
+@app.route('/health')
+def health():
+    return "OK"
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react_app(path):
