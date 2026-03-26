@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, SafeAreaView, ScrollView, ActivityIndicator, TextInput
 } from 'react-native';
@@ -131,12 +131,21 @@ export default function ReceiptsDashboard() {
       </View>
     </TouchableOpacity>
   );
-
+  const handleRefresh = async () => {
+    setLoading(true);
+    await fetchReceipts();
+    await fetchAnalytics();
+    setLoading(false);
+  };
   const renderHeader = () => (
 
     <View style={{ marginBottom: 20 }}>
       {/* TOP CARDS */}
       <View style={styles.topRow}>
+        <TouchableOpacity style={styles.refreshCard} onPress={handleRefresh}>
+          <Ionicons name="refresh" size={24} color="#0F766E" />
+          <Text style={styles.cardValue}>Refresh</Text>
+        </TouchableOpacity>
         <View style={styles.card}>
           <Ionicons name="wallet-outline" size={22} color="#0F766E" />
           <Text style={styles.cardValue}>₹{totalRevenue.toFixed(2)}</Text>
@@ -212,9 +221,9 @@ export default function ReceiptsDashboard() {
           data={filteredReceipts}
           keyExtractor={(item) => item.id}
           renderItem={renderReceiptItem}
-          ListHeaderComponent={renderHeader} 
+          ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled" 
+          keyboardShouldPersistTaps="handled"
         />
       )}
 
@@ -325,6 +334,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
     height: '100%',
+  },
+ refreshCard: { 
+  flex: 1, 
+  backgroundColor: '#FFFFFF', 
+  padding: 16, 
+  borderRadius: 12, 
+  marginHorizontal: 4, 
+  elevation: 2, 
+  shadowColor: '#000', 
+  shadowOpacity: 0.05, 
+  shadowRadius: 4,
+  justifyContent: 'center', 
+  alignItems: 'center',    
+},
+  refreshLabel: {
+    fontSize: 12,
+    color: '#6B7280', 
+    fontWeight: '600',
+    marginTop: 4
   },
   statsContainer: { marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
