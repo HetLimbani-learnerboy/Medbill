@@ -4,10 +4,6 @@ from app import create_app
     
 app = create_app()
 
-if __name__ == '__main__':
-    PORT = int(os.environ.get('PORT', 3000))
-    app.run(host='0.0.0.0', port=PORT)
-
 @app.route('/health')
 def health():
     return "OK"
@@ -21,3 +17,7 @@ def serve_react_app(path):
         return send_from_directory(static_folder, path)
 
     return send_from_directory(static_folder, 'index.html')
+
+if __name__ == '__main__':
+    PORT = int(os.environ.get('PORT', 3000))
+    app.run(host='0.0.0.0', port=PORT)
