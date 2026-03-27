@@ -409,6 +409,7 @@ import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useCart } from '../CartContext'; 
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from '@react-navigation/native';
 
 interface FoodProductResponse {
   status: number;
@@ -417,6 +418,7 @@ interface FoodProductResponse {
 
 export default function Index() {
   const [permission, requestPermission] = useCameraPermissions();
+  const isFocussed = useIsFocused()
   const [zoom, setZoom] = useState<number>(0);
   const [scannedItem, setScannedItem] = useState<string | null>(null);
   const router = useRouter();
@@ -536,12 +538,12 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <CameraView
+      {isFocussed && <CameraView
         style={StyleSheet.absoluteFillObject}
         zoom={zoom}
         onBarcodeScanned={(isProcessing.current || modalVisible || billModalVisible || manualModalVisible) ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ["qr", "ean13", "code128"] }}
-      />
+      />}
 
       {/* TOP CONTROLS */}
       <View style={styles.topControls}>
