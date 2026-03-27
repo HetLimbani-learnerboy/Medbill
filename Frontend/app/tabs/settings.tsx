@@ -1,251 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { useRouter } from "expo-router";
-import { useAuth } from "../AuthContext";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import React, { useState } from 'react';
+import {
+  Alert, Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-export default function Settings() {
-  const { logout } = useAuth();
-  const router = useRouter();
-  const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+// --- Types ---
+type UserRole = 'Admin' | 'Staff';
 
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+interface UserProfile {
+  name: string;
+  email: string;
+  role: UserRole;
+  shopName: string;
+}
 
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [role, setRole] = useState('');
-  const [createdAt, setCreatedAt] = useState('');
+// --- Mock Current User ---
+// Change this to 'Staff' to see how the UI adapts!
+const currentUser: UserProfile = {
+  name: 'Aarav Patel',
+  email: 'aarav@medbill.in',
+  role: 'Admin', // 'Admin' or 'Staff'
+  shopName: 'MedBill Pharmacy Main'
+};
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+export default function SettingsScreen() {
+  // --- State for Toggles ---
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [scannerBeep, setScannerBeep] = useState<boolean>(true);
+  const [autoPrintReceipt, setAutoPrintReceipt] = useState<boolean>(true);
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setUsername(parsed.username || '');
-        setEmail(parsed.email || '');
-      }
+  const navigation: any = useNavigation();
 
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${BASE_URL}/api/user/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUsername(data.username);
-        setPhoneNumber(data.phone_number || '');
-        setEmail(data.email);
-        setRole(data.role);
-        setCreatedAt(data.created_at);
-      }
-    } catch (error) {
-      console.error("Profile Fetch Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!username.trim() || !phoneNumber.trim()) {
-      Alert.alert("Error", "Username and Phone cannot be empty");
-      return;
-    }
-
-    try {
-      setUpdating(true);
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${BASE_URL}/api/user/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          username: username,
-          phone_number: phoneNumber
-        })
-      });
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        const storedUser = await AsyncStorage.getItem('user');
-        if (storedUser) {
-          const userObj = JSON.parse(storedUser);
-          await AsyncStorage.setItem('user', JSON.stringify({ ...userObj, username: username }));
-        }
-        
-        setIsEditing(false);
-        Alert.alert("Success", "Profile updated successfully");
-      } else {
-        Alert.alert("Error", "Failed to update profile");
-      }
-    } catch (error) {
-      Alert.alert("Network Error", "Check your connection");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
+  // --- Handlers ---
   const handleLogout = () => {
-    logout();
-    router.replace("/LandingPage");
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log Out", style: "destructive", onPress: () => console.log("Logged out") }
+    ]);
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color="#0F766E" />
+  // --- Reusable UI Components ---
+  const SectionHeader = ({ title }: { title: string }) => (
+    <Text style={styles.sectionHeader}>{title}</Text>
+  );
+
+  const SettingRow = ({ 
+    icon, title, subtitle, onPress, value, onValueChange, isDestructive 
+  }: { 
+    icon: keyof typeof Ionicons.glyphMap; 
+    title: string; 
+    subtitle?: string; 
+    onPress?: () => void; 
+    value?: boolean; 
+    onValueChange?: (val: boolean) => void;
+    isDestructive?: boolean;
+  }) => (
+    <TouchableOpacity 
+      style={styles.settingRow} 
+      onPress={onPress} 
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
+      <View style={styles.settingIconContainer}>
+        <Ionicons name={icon} size={22} color={isDestructive ? '#EF4444' : '#4B5563'} />
       </View>
-    );
-  }
+      <View style={styles.settingTextContainer}>
+        <Text style={[styles.settingTitle, isDestructive && styles.destructiveText]}>{title}</Text>
+        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+      </View>
+      
+      {/* Render Switch if onValueChange is provided, else render Arrow */}
+      {onValueChange ? (
+        <Switch 
+          value={value} 
+          onValueChange={onValueChange} 
+          trackColor={{ false: '#D1D5DB', true: '#0F766E' }}
+          thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (value ? '#FFFFFF' : '#F3F4F6')}
+        />
+      ) : (
+        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+      )}
+    </TouchableOpacity>
+  );
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={{ flex: 1 }}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>Account Settings</Text>
-            <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{currentUser.name.charAt(0)}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{currentUser.name}</Text>
+            <Text style={styles.profileEmail}>{currentUser.email}</Text>
+
+            <View style={[styles.roleBadge, currentUser.role === 'Admin' ? styles.adminBadge : styles.staffBadge]}>
               <Ionicons 
-                name={isEditing ? "close-circle" : "pencil-outline"} 
-                size={24} 
-                color="#0F766E" 
+                name={currentUser.role === 'Admin' ? 'shield-checkmark' : 'person'} 
+                size={12} 
+                color={currentUser.role === 'Admin' ? '#D97706' : '#0284C7'} 
+                style={{ marginRight: 4 }}
               />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.newUserBox}>
-            <Text style={styles.infoText}>Account Details</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Email:</Text>
-              <Text style={styles.summaryValue}>{email}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Role:</Text>
-              <Text style={[styles.summaryValue, { textTransform: 'capitalize' }]}>{role}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Joined:</Text>
-              <Text style={styles.summaryValue}>{new Date(createdAt).toLocaleDateString()}</Text>
+              <Text style={[styles.roleText, currentUser.role === 'Admin' ? styles.adminText : styles.staffText]}>
+                {currentUser.role}
+                <Text style={styles.shopText}> • {currentUser.shopName}</Text>
+              </Text>
             </View>
           </View>
-
-          <View style={styles.dashedLine} />
-
-          <View style={styles.section}>
-            <Text style={styles.subHeader}>Profile Information</Text>
-            
-            <Text style={styles.label}>Full Name</Text>
-            {isEditing ? (
-              <TextInput 
-                style={styles.input} 
-                value={username} 
-                onChangeText={setUsername}
-                placeholder="Enter username"
-              />
-            ) : (
-              <View style={styles.displayBox}>
-                <Text style={styles.displayText}>{username}</Text>
-              </View>
-            )}
-
-            <Text style={styles.label}>Phone Number</Text>
-            {isEditing ? (
-              <TextInput 
-                style={styles.input} 
-                value={phoneNumber} 
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                placeholder="Enter phone number"
-              />
-            ) : (
-              <View style={styles.displayBox}>
-                <Text style={styles.displayText}>{phoneNumber || "Not provided"}</Text>
-              </View>
-            )}
-          </View>
-
-          {isEditing && (
-            <TouchableOpacity 
-              style={styles.button} 
-              onPress={handleUpdate}
-              disabled={updating}
-            >
-              {updating ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.buttonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity 
-            style={[styles.button, { backgroundColor: '#F87171', marginTop: isEditing ? 12 : 30 }]} 
-            onPress={handleLogout}
-          >
-            <Text style={styles.buttonText}>Logout</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* Admin Only Section: Shop & Staff Management */}
+        {currentUser.role === 'Admin' && (
+          <View style={styles.section}>
+            <SectionHeader title="Shop Administration" />
+            <View style={styles.card}>
+              <SettingRow 
+                icon="business-outline" 
+                title="Shop Profile & GST" 
+                subtitle="Manage tax details and address"
+                onPress={() => navigation.navigate("ShopProfileSettings")} 
+              />
+              <View style={styles.divider} />
+              <SettingRow 
+                icon="people-outline" 
+                title="Staff Management" 
+                subtitle="Add cashiers and manage permissions"
+                onPress={() => navigation.navigate("StaffManagementScreen")} 
+              />
+              <View style={styles.divider} />
+              <SettingRow 
+                icon="bar-chart-outline" 
+                title="Detailed Analytics" 
+                subtitle="Export monthly revenue reports"
+                onPress={() => console.log('Go to Analytics')} 
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Utility & Hardware Settings */}
+        <View style={styles.section}>
+          <SectionHeader title="Hardware & Utility" />
+          <View style={styles.card}>
+            <SettingRow 
+              icon="print-outline" 
+              title="Receipt Printer" 
+              subtitle="Connect via Bluetooth or Wi-Fi"
+              onPress={() => navigation.navigate('PrinterSetup')} 
+            />
+            <View style={styles.divider} />
+            <SettingRow 
+              icon="volume-high-outline" 
+              title="Scanner Beep Sound" 
+              value={scannerBeep}
+              onValueChange={setScannerBeep} 
+            />
+            <View style={styles.divider} />
+            <SettingRow 
+              icon="document-text-outline" 
+              title="Auto-Print on Checkout" 
+              value={autoPrintReceipt}
+              onValueChange={setAutoPrintReceipt} 
+            />
+          </View>
+        </View>
+
+        {/* App Preferences */}
+        <View style={styles.section}>
+          <SectionHeader title="App Preferences" />
+          <View style={styles.card}>
+            <SettingRow 
+              icon="moon-outline" 
+              title="Dark Mode" 
+              value={isDarkMode}
+              onValueChange={setIsDarkMode} 
+            />
+            <View style={styles.divider} />
+            <SettingRow 
+              icon="lock-closed-outline" 
+              title="Change Password" 
+              onPress={() => console.log('Go to Change Password')} 
+            />
+          </View>
+        </View>
+
+        {/* Footer Actions */}
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <SettingRow 
+              icon="help-circle-outline" 
+              title="Help & Support" 
+              onPress={() => console.log('Go to Support')} 
+            />
+            <View style={styles.divider} />
+            <SettingRow 
+              icon="log-out-outline" 
+              title="Log Out" 
+              isDestructive={true}
+              onPress={handleLogout} 
+            />
+          </View>
+        </View>
+
+        <Text style={styles.versionText}>MedBill App v1.0.0</Text>
+
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: "#E6F7F7", padding: 20, paddingTop: 50 },
-  card: { backgroundColor: "white", padding: 25, borderRadius: 20, elevation: 6 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: "900", color: "#0F766E" },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  scrollContent: { padding: 16, paddingBottom: 40 },
   
-  label: { fontSize: 14, fontWeight: "700", color: "#134E4A", marginBottom: 6 },
-  input: { backgroundColor: "#F1F5F9", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#CBD5F5", marginBottom: 16, fontSize: 16 },
-  displayBox: { backgroundColor: "#F8FAFC", padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0", marginBottom: 16 },
-  displayText: { fontSize: 16, color: "#1E293B", fontWeight: "600" },
+  // Profile Header
+  profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 8 },
+  avatarCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#0F766E', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  avatarText: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+  profileEmail: { fontSize: 14, color: '#6B7280', marginBottom: 6 },
+  
+  // roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', },
+  adminBadge: { backgroundColor: '#FEF3C7' },
+  adminText: { color: '#D97706', fontSize: 12, fontWeight: '600' },
+  staffBadge: { backgroundColor: '#E0F2FE' },
+  staffText: { color: '#0284C7', fontSize: 12, fontWeight: '600' },
 
-  newUserBox: {
-    backgroundColor: "#F0FDFA",
-    padding: 15,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "#5EEAD4",
-    marginBottom: 15,
-  },
-  infoText: {
-    fontSize: 12,
-    color: "#0D9488",
-    fontWeight: "800",
-    marginBottom: 10,
-    textTransform: "uppercase"
-  },
-  dashedLine: { borderWidth: 1, borderColor: "#CBD5F5", borderStyle: "dashed", height: 0, width: "100%", marginVertical: 15 },
-  subHeader: { fontSize: 18, fontWeight: "800", color: "#0F766E", marginBottom: 15 },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  summaryLabel: { color: "#64748B", fontSize: 14, fontWeight: "600" },
-  summaryValue: { fontWeight: "700", color: "#1E293B", fontSize: 15 },
-  button: { backgroundColor: "#14B8A6", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 10 },
-  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
-  section: { marginTop: 5 }
+  // Sections
+  section: { marginBottom: 24 },
+  sectionHeader: { fontSize: 14, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: 8, marginLeft: 8 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, overflow: 'hidden', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3 },
+  
+  // Setting Row
+  settingRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF' },
+  settingIconContainer: { width: 36, alignItems: 'flex-start' },
+  settingTextContainer: { flex: 1, paddingRight: 16 },
+  settingTitle: { fontSize: 16, color: '#1F2937', fontWeight: '500' },
+  settingSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  destructiveText: { color: '#EF4444' },
+  
+  divider: { height: 1, backgroundColor: '#E5E7EB', marginLeft: 18, marginRight: 18 },
+  
+  versionText: { textAlign: 'center', color: '#9CA3AF', fontSize: 12, marginTop: 8 },
+  roleText: {fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
+  shopText: { fontWeight: '400', opacity: 0.8, }
 });
