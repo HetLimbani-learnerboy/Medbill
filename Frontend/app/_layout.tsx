@@ -14,7 +14,8 @@ function RootLayoutNav() {
           <Stack.Screen name="SignUp" />
           <Stack.Screen name="ShopProfileSettings"/>
           <Stack.Screen name="StaffManagementScreen"/>
-          <Stack.Screen name="PrinterSetup" />
+          <Stack.Screen name="HelpSupport" />
+          <Stack.Screen name="PreviousReceipts" />
         </>
       ) : (
         <Stack.Screen name="tabs" options={{ headerShown: false }} />
