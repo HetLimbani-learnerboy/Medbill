@@ -227,7 +227,7 @@ const clearDates = () => {
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.dateSeparator}>-</Text>
+        <Text style={styles.dateSeparator}></Text>
 
         <TouchableOpacity 
           style={styles.dateInput} 
