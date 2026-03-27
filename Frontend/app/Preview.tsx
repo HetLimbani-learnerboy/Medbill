@@ -1,21 +1,20 @@
 import React, { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  ActivityIndicator,
-  Platform,
-  Keyboard
+  View
 } from "react-native";
 
-import { useCart } from "../CartContext";
 import { useRouter } from "expo-router";
-import { Picker } from "@react-native-picker/picker";
+import { useCart } from "./CartContext";
 
 export default function Preview() {
   const API_URL = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -180,18 +179,48 @@ export default function Preview() {
 
           <Text style={styles.label}>Contact Method *</Text>
           <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={contactType}
-              onValueChange={(val) => {
-                setContactType(val);
-                setContactValue("");
-                setUserExists(false);
-                setUsername("");
-              }}
-            >
-              <Picker.Item label="Phone Number" value="phone" />
-              <Picker.Item label="Email Address" value="email" />
-            </Picker>
+            <View style={styles.toggleContainer}>
+              {/* picker */}
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  contactType === "phone" && styles.activeToggleButton
+                ]}
+                onPress={() => {
+                  setContactType("phone");
+                  setContactValue("");
+                  setUserExists(false);
+                  setUsername("");
+                }}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  contactType === "phone" && styles.activeToggleText
+                ]}>
+                  Phone Number
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  contactType === "email" && styles.activeToggleButton
+                ]}
+                onPress={() => {
+                  setContactType("email");
+                  setContactValue("");
+                  setUserExists(false);
+                  setUsername("");
+                }}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  contactType === "email" && styles.activeToggleText
+                ]}>
+                  Email Address
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.label}>
@@ -355,7 +384,18 @@ const styles = StyleSheet.create({
   smallInput: { backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#CBD5E1", width: 60, padding: 5, borderRadius: 8, textAlign: "center", marginTop: 4 },
   finalTotalContainer: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, paddingTop: 15, borderTopWidth: 2, borderTopColor: "#14B8A6" },
   totalLabel: { fontSize: 20, fontWeight: "900", color: "#0F766E" },
-  totalValue: { fontSize: 22, fontWeight: "900", color: "#14B8A6" },
+  totalValue: { fontSize: 22, fontWeight: "900", color: "#0F766E" },
   button: { backgroundColor: "#14B8A6", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 25 },
-  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" }
+  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  
+  // --- Segmented Toggle Styles ---
+  toggleContainer: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4, },
+  toggleButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 8,},
+  activeToggleButton: { backgroundColor: '#0F766E', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3, },
+  toggleText: {
+    fontSize: 14, fontWeight: '600',
+    color: '#64748B', // Unselected slate color
+  },
+  activeToggleText: {color: '#FFFFFF', // White text when selected 
+  },
 });

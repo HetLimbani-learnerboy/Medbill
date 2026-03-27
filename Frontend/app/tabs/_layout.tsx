@@ -48,16 +48,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      
-      <Tabs.Screen
-        name="preview"
-        options={{
-          title: "Preview",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="eye-outline" size={size || 28} color={color} />
-          ),
-        }}
-      />
 
       <Tabs.Screen
         name="settings"
