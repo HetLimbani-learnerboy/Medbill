@@ -142,7 +142,7 @@ export default function SettingsScreen() {
                 icon="bar-chart-outline" 
                 title="Detailed Analytics" 
                 subtitle="Export monthly revenue reports"
-                onPress={() => console.log('Go to Analytics')} 
+                onPress={() => navigation.navigate('PreviousReceipts')} 
               />
             </View>
           </View>
@@ -156,7 +156,7 @@ export default function SettingsScreen() {
               icon="print-outline" 
               title="Receipt Printer" 
               subtitle="Connect via Bluetooth or Wi-Fi"
-              onPress={() => navigation.navigate('PrinterSetup')} 
+              onPress={() => console.log("Scanning Printer")} 
             />
             <View style={styles.divider} />
             <SettingRow 
@@ -200,7 +200,7 @@ export default function SettingsScreen() {
             <SettingRow 
               icon="help-circle-outline" 
               title="Help & Support" 
-              onPress={() => console.log('Go to Support')} 
+              onPress={() => navigation.navigate('HelpSupport')} 
             />
             <View style={styles.divider} />
             <SettingRow 

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Sharing from 'expo-sharing';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Modal, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import RevenueChart from './RevenueChart';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -137,85 +138,67 @@ const clearDates = () => {
     }
   };
 
-  const fetchReceiptById = async (id: string) => {
-    try {
-      const res = await fetch(`${API_URL}/${id}`);
-      const data = await res.json();
-      setSelectedReceipt(data);
-      setModalVisible(true);
-    } catch (e) {
-      console.log("Single Receipt Error:", e);
-    }
-  };
-
   useEffect(() => {
     fetchReceipts();
     fetchAnalytics();
   }, []);
 
-  const filteredReceipts = useMemo(() => {
-    if (!searchQuery) return receipts;
-    const query = searchQuery.toLowerCase();
-    return receipts.filter((item) =>
-      item.customerName?.toLowerCase().includes(query) ||
-      item.customerPhone?.toLowerCase().includes(query) ||
-      item.billAmount.toString().includes(query)
-    );
-  }, [searchQuery, receipts]);
-
-  const renderReceiptItem = ({ item }: { item: Receipt }) => (
-    <TouchableOpacity
-      style={styles.receiptCard}
-      onPress={() => fetchReceiptById(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.receiptHeader}>
-        <Text style={styles.customerName}>{item.customerName}</Text>
-        <Text style={styles.billAmount}>₹{item.billAmount.toFixed(2)}</Text>
-      </View>
-      <View style={styles.receiptFooter}>
-        <Text style={styles.dateTime}>{item.dateTime}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-      </View>
-    </TouchableOpacity>
-  );
-  const handleRefresh = async () => {
-    setLoading(true);
-    await fetchReceipts();
-    await fetchAnalytics();
-    setLoading(false);
-  };
-  const renderHeader = () => (
-    <View>
-      <Text style={[styles.sectionTitle, { marginLeft: 10, marginTop: 10, marginBottom: 20 }]}>Recent Receipts</Text>
-    </View>
-  );
+  const handleDownloadRange = () => {
+    console.log("Donload started...")
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.searchContainerOuter}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            placeholder="Search by name, phone or amount..."
-            placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
-            value={searchInput}
-            onChangeText={setSearchInput}
-            returnKeyType="search"
-            onSubmitEditing={() => setSearchQuery(searchInput)} // Trigger on keyboard 'Search'
-          />
-          <TouchableOpacity onPress={() => setSearchQuery(searchInput)}>
-            <Ionicons name="search" size={20} color="#0F766E" />
-          </TouchableOpacity>
-          {searchInput.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchInput(''); setSearchQuery(''); }}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
-          )}
+
+
+      <View style={styles.statsContainer}>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.sectionTitle}>This Month's Overview</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Ionicons name="receipt-outline" size={24} color="#0F766E" />
+            <Text style={styles.statValue}>{totalReceipts}</Text>
+            <Text style={styles.statLabel}>Bills Generated</Text>
+            {/* Note: These percentages are static for now. You can link them to API data later! */}
+            <Text style={styles.statTrendUp}>↑ 12% vs last month</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <Ionicons name="wallet-outline" size={24} color="#0F766E" />
+            <Text style={styles.statValue}>₹{totalRevenue.toFixed(2)}</Text>
+            <Text style={styles.statLabel}>Total Revenue</Text>
+            <Text style={styles.statTrendUp}>↑ 8% vs last month</Text>
+          </View>
         </View>
       </View>
 
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#0F766E" />
+        </View>
+      ) : (
+        <RevenueChart />
+      )}
       {/* NEW: Date Filters */}
+      <View style={styles.headerTitleRow}>
+        <Text style={styles.sectionTitle}>Custom Period Report</Text>
+        <TouchableOpacity 
+          style={[styles.downloadReportBtn, (!fromDate || !toDate) && styles.downloadReportBtnDisabled]} 
+          onPress={handleDownloadRange} // Replace with your actual download function
+          disabled={!fromDate || !toDate} // Prevents tapping if dates aren't picked
+        >
+          <Ionicons 
+            name="download-outline" 
+            size={18} 
+            color={(!fromDate || !toDate) ? "#9CA3AF" : "#FFFFFF"} 
+          />
+          <Text style={[styles.downloadReportText, (!fromDate || !toDate) && styles.downloadReportTextDisabled]}>
+            Download
+          </Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.dateFilterRow}>
         <TouchableOpacity 
           style={styles.dateInput} 
@@ -227,7 +210,7 @@ const clearDates = () => {
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.dateSeparator}>-</Text>
+        <Text style={styles.dateSeparator}></Text>
 
         <TouchableOpacity 
           style={styles.dateInput} 
@@ -287,119 +270,6 @@ const clearDates = () => {
         )
       )}
 
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color="#0F766E" />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredReceipts}
-          keyExtractor={(item) => item.id}
-          renderItem={renderReceiptItem}
-          ListHeaderComponent={renderHeader}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
-
-      {/* MODAL */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {selectedReceipt && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                
-                {/* --- WRAPPER FOR SCREENSHOT --- */}
-                <View 
-                  ref={receiptRef} 
-                  collapsable={false} 
-                  style={{ backgroundColor: '#FFFFFF', padding: 10 }}
-                >
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.shopName}>{selectedReceipt.shopName}</Text>
-                    <Text style={styles.subText}>Phone: {selectedReceipt.shopPhone}</Text>
-                    <Text style={styles.subText}>Billed by: {selectedReceipt.creatorName}</Text>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <View style={styles.section}>
-                    <Text style={styles.sectionHeading}>Customer Details</Text>
-                    <Text style={styles.detailText}>Name: {selectedReceipt.customerName}</Text>
-                    <Text style={styles.detailText}>Email: {selectedReceipt.customerEmail}</Text>
-                    <Text style={styles.detailText}>Phone: {selectedReceipt.customerPhone}</Text>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <View style={styles.section}>
-                    <Text style={styles.sectionHeading}>Items Purchased</Text>
-                    {selectedReceipt.items.map((item, index) => (
-                      <View key={index} style={styles.itemRow}>
-                        <View style={{ flex: 2 }}>
-                          <Text style={styles.itemName}>{item.name}</Text>
-                          <Text style={styles.itemQty}>
-                            {item.qty} x ₹{item.pricePerUnit.toFixed(2)}
-                          </Text>
-                        </View>
-                        <Text style={styles.itemTotal}>₹{item.total.toFixed(2)}</Text>
-                      </View>
-                    ))}
-
-                    <View style={styles.calculationContainer}>
-                      <View style={styles.calcRow}>
-                          <Text style={styles.calcLabel}>GST ({selectedReceipt.gst_percent}%)</Text>
-                          <Text style={styles.calcValue}>₹{selectedReceipt.gst_amount.toFixed(2)}</Text>
-                      </View>
-                      <View style={styles.calcRow}>
-                          <Text style={styles.calcLabel}>Offer ({selectedReceipt.offer_percent}%)</Text>
-                          <Text style={[styles.calcValue, styles.offerValue]}>
-                          -₹{selectedReceipt.offer_amount.toFixed(2)}
-                          </Text>
-                      </View>
-                     </View>
-
-                    <View style={styles.totalRow}>
-                      <Text style={styles.totalLabel}>Grand Total</Text>
-                      <Text style={styles.totalAmount}>
-                        ₹{selectedReceipt.billAmount.toFixed(2)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <View style={styles.section}>
-                    <Text style={styles.sectionHeading}>Payment Details</Text>
-                    <Text style={styles.detailText}>Method: {selectedReceipt.payment?.method}</Text>
-                    <Text style={styles.detailText}>Txn ID: {selectedReceipt.payment?.transactionId}</Text>
-                    <Text style={styles.detailText}>Time: {selectedReceipt.payment?.time}</Text>
-                  </View>
-                </View>
-                {/* --- END OF WRAPPER --- */}
-
-                {/* Updated Action Buttons */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
-                  <TouchableOpacity
-                    style={[styles.closeButton, { flex: 1, marginRight: 8, backgroundColor: '#CCFBF1' }]}
-                    onPress={handleShareReceiptUI}
-                  >
-                    <Text style={[styles.closeButtonText, { color: '#0F766E' }]}>Download/Print</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.closeButton, { flex: 1, marginLeft: 8 }]}
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <Text style={styles.closeButtonText}>Close</Text>
-                  </TouchableOpacity>
-                </View>
-
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -407,12 +277,39 @@ const clearDates = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F3F4F6' },
     listContent: { padding: 16 },
-    searchContainerOuter: {
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 10,
-        backgroundColor: '#F3F4F6',
-    },
+
+    headerTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Pushes title left, button right
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  downloadReportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F766E', // Matches your active calendar icon color
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4, // Adds a small space between the icon and text
+  },
+  downloadReportBtnDisabled: {
+    backgroundColor: '#E5E7EB', // Gray background when disabled
+  },
+  downloadReportText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  downloadReportTextDisabled: {
+    color: '#9CA3AF', // Gray text when disabled
+  },
 
     // --- iOS Date Picker Modal Styles ---
     datePickerModalOverlay: {
@@ -480,48 +377,11 @@ const styles = StyleSheet.create({
 			padding: 4,
 		},
 
-    // --- Calculation Area Styles (GST & Offers) ---
-    calculationContainer: { 
-        marginTop: 8, 
-        paddingTop: 12, 
-        borderTopWidth: 1, 
-        borderTopColor: '#F3F4F6' // Very subtle separator after items
-    },
-    calcRow: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        marginBottom: 4 
-    },
-    calcLabel: { 
-        fontSize: 14, 
-        color: '#6B7280', // Muted text for labels
-        fontWeight: '400'
-    },
-    calcValue: { 
-        fontSize: 14, 
-        fontWeight: '500', 
-        color: '#374151' 
-    },
-    offerValue: { 
-        color: '#10B981', // A pleasant green to indicate savings
-        fontWeight: '600'
-    },
     // Add these inside your styles = StyleSheet.create({ ... })
     statsContainer: { 
-        marginTop: -12,
+        marginTop: 20,
         marginBottom: 10, 
         paddingHorizontal: 8 
-    },
-    headerTitleRow: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 12 
-    },
-    sectionTitle: { 
-        fontSize: 18, 
-        fontWeight: '700', 
-        color: '#111827' 
     },
     statsRow: { 
         flexDirection: 'row', 
@@ -561,43 +421,6 @@ const styles = StyleSheet.create({
         color: '#374151',
         marginBottom: 8,
     },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 50,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1F2937',
-    height: '100%',
-  },
- refreshCard: { 
-  flex: 1, 
-  backgroundColor: '#FFFFFF', 
-  padding: 16, 
-  borderRadius: 12, 
-  marginHorizontal: 4, 
-  elevation: 2, 
-  shadowColor: '#000', 
-  shadowOpacity: 0.05, 
-  shadowRadius: 4,
-  justifyContent: 'center', 
-  alignItems: 'center',    
-},
-  refreshLabel: {
-    fontSize: 12,
-    color: '#6B7280', 
-    fontWeight: '600',
-    marginTop: 4
-  },
   
   receiptCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3 },
   receiptHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
