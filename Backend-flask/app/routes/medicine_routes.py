@@ -51,6 +51,7 @@ def search_medicine():
 
     return jsonify([
         {
+            "found": True,
             "barcode": m.barcode,
             "medicine_name": m.medicine_name,
             "company": m.company,

@@ -918,6 +918,16 @@ export default function InventoryScreen() {
   const [addDistributor, setAddDistributor] = useState('');
   const [newStockInput, setNewStockInput] = useState('0'); // For current + new logic
 
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      if (addBarcode.length >= 3 && addModalVisible && !isSearchingDetail) {
+        handleBarcodeSearch(addBarcode);
+      }
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [addBarcode, addModalVisible]);
+
   // Reset function to clear states and close modal
   const resetAddModal = () => {
     setAddBarcode('');
@@ -925,54 +935,65 @@ export default function InventoryScreen() {
     setAddCompany('');
     setAddPrice('');
     setAddQuantity('');
+    setNewStockInput('0');
+    setAddCategory('Tablet');
+    setAddComposition('');
+    setAddExpiry('');
+    setAddDistributor('');
+    setShowAdvanced(false);
+    setIsExistingItem(false);
     setAddModalVisible(false);
     setIsScanning(false);
   };
 
   // Search logic for scanned barcode
-  const searchInventoryProductDetails = async (scannedBarcode: string) => {
-    setIsSearchingDetail(true);
-    setIsExistingItem(false);
-    setShowAdvanced(false);
+  // const searchInventoryProductDetails = async (scannedBarcode: string) => {
+  //   setIsSearchingDetail(true);
+  //   setIsExistingItem(false);
+  //   setShowAdvanced(false);
 
-    try {
-      const res = await fetch(`${API_URL}/inventory/${scannedBarcode}`);
-      if (res.ok) {
-        const data = await res.json();
-        setIsExistingItem(true);
-        setAddBarcode(scannedBarcode);
-        setAddName(data.medicine_name);
-        setAddCompany(data.company);
-        setAddPrice(data.price.toString());
-        setAddQuantity(data.quantity.toString()); // Total currently in DB
-        setNewStockInput('0');
-      } else {
-        // Not in DB, try external API
-        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${scannedBarcode}.json`);
-        const result = await response.json();
-        setAddBarcode(scannedBarcode);
-        setIsExistingItem(false);
-        setAddName(result.product?.product_name || '');
-        setAddCompany(result.product?.brands || '');
-        setAddPrice('');
-        setAddQuantity('0');
-      }
-    } catch (error) {
-      setAddBarcode(scannedBarcode);
-    } finally {
-      setIsSearchingDetail(false);
-    }
-  };
+  //   try {
+  //     const res = await fetch(`${API_URL}/inventory/${scannedBarcode}`);
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setIsExistingItem(true);
+  //       setAddBarcode(scannedBarcode);
+  //       setAddName(data.medicine_name);
+  //       setAddCompany(data.company);
+  //       setAddPrice(data.price.toString());
+  //       setAddQuantity(data.quantity.toString()); // Total currently in DB
+  //       setNewStockInput('0');
+  //     } else {
+  //       // Not in DB, try external API
+  //       const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${scannedBarcode}.json`);
+  //       const result = await response.json();
+  //       setAddBarcode(scannedBarcode);
+  //       setIsExistingItem(false);
+  //       setAddName(result.product?.product_name || '');
+  //       setAddCompany(result.product?.brands || '');
+  //       setAddPrice('');
+  //       setAddQuantity('0');
+  //     }
+  //   } catch (error) {
+  //     setAddBarcode(scannedBarcode);
+  //   } finally {
+  //     setIsSearchingDetail(false);
+  //   }
+  // };
 
   const handleSaveOrAdd = async () => {
+    if (!addBarcode || !addName || !addPrice) {
+      Alert.alert("Error", "Barcode, Name, and Price are required.");
+      return;
+    }
+
     const method = isExistingItem ? "PUT" : "POST";
     const endpoint = isExistingItem ? `${API_URL}/inventory/${addBarcode}` : `${API_URL}/inventory`;
 
-    // Define the base object with a flexible type [key: string]: any
     const payload: any = {
       barcode: addBarcode,
       medicine_name: addName,
-      company: addCompany,
+      company: addCompany || "Unknown",
       price: parseFloat(addPrice),
       category: addCategory,
       composition: addComposition,
@@ -981,7 +1002,6 @@ export default function InventoryScreen() {
     };
 
     if (isExistingItem) {
-      // Now this won't give a red line because the type is 'any'
       payload.new_stock = parseInt(newStockInput, 10) || 0;
     } else {
       payload.quantity = parseInt(addQuantity, 10) || 0;
@@ -995,23 +1015,27 @@ export default function InventoryScreen() {
       });
 
       if (res.ok) {
-        Alert.alert("Success", isExistingItem ? "Stock Updated" : "Added to Inventory");
-        fetchInventory();
+        Alert.alert("Success", isExistingItem ? "Inventory Updated" : "Added Successfully");
+        fetchInventory(); // Refresh the list
         resetAddModal();
+      } else {
+        const err = await res.json();
+        Alert.alert("Error", err.message || "Operation failed");
       }
     } catch (e) {
-      Alert.alert("Error", "Server connection failed");
+      Alert.alert("Network Error", "Check server connection");
     }
   };
 
   const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
     if (isScanning) return;
-    setIsScanning(true); // Prevent multiple scans at once
+    setIsScanning(true);
 
-    await handleBarcodeSearch(data);
+    setAddBarcode(data); // Set state
+    await handleBarcodeSearch(data); // Call search immediately to avoid delay
 
-    setScannerModalVisible(false); // Close camera
-    setAddModalVisible(true);      // Open the details modal
+    setScannerModalVisible(false);
+    setAddModalVisible(true);
   };
 
   const handleManualAddBarcode = () => {
@@ -1078,16 +1102,17 @@ export default function InventoryScreen() {
 
   const handleSaveQuantity = async () => {
     if (!selectedItem) return;
-
     const qty = parseInt(editQuantity, 10);
 
     try {
       const res = await fetch(
-        `${API_URL}/inventory/${selectedItem.id}`, 
+        `${API_URL}/inventory/${selectedItem.id}`, // Backend uses barcode as string param
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity: isNaN(qty) ? 0 : qty })
+          body: JSON.stringify({
+            new_stock: qty
+          })
         }
       );
 
@@ -1133,6 +1158,7 @@ export default function InventoryScreen() {
       Alert.alert("Network Error", "Check your backend connection");
     }
   };
+
   const handleBarcodeSearch = async (barcode: string) => {
     if (!barcode || barcode.length < 3) return;
 
@@ -1141,22 +1167,44 @@ export default function InventoryScreen() {
     try {
       const res = await fetch(`${API_URL}/inventory/${barcode}`);
 
-      if (res.ok) {
+      if (res.status === 200) {
         const data = await res.json();
 
         setIsExistingItem(true);
-        setAddName(data.medicine_name);
-        setAddCompany(data.company);
-        setAddPrice(data.price.toString());
-        setAddQuantity(data.quantity.toString());
+
+        setAddName(data.medicine_name || '');
+        setAddCompany(data.company || '');
+        setAddPrice(data.price?.toString() || '');
+        setAddQuantity(data.quantity?.toString() || '0');
         setNewStockInput('0');
 
-      } else {
+      } else if (res.status === 404) {
         setIsExistingItem(false);
+
+        // Optional external API
+        try {
+          const ext = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+          const extData = await ext.json();
+
+          if (extData.status === 1) {
+            setAddName(extData.product.product_name || '');
+            setAddCompany(extData.product.brands || '');
+          } else {
+            setAddName('');
+            setAddCompany('');
+          }
+
+        } catch {
+          setAddName('');
+          setAddCompany('');
+        }
+
+        setAddPrice('');
+        setAddQuantity('0');
       }
 
     } catch (err) {
-      console.log("Barcode fetch error", err);
+      console.log("Search error", err);
     } finally {
       setIsSearchingDetail(false);
     }
@@ -1255,14 +1303,28 @@ export default function InventoryScreen() {
                 <Text style={styles.modalTitle}>Update Stock</Text>
                 <Text style={styles.modalSubtitle}>{selectedItem.name}</Text>
 
+                {/* Current Stock */}
+                <Text style={{ textAlign: 'center', marginBottom: 10, color: '#6B7280' }}>
+                  Current Stock: {selectedItem.quantity}
+                </Text>
+
+                {/* Input */}
                 <TextInput
                   style={styles.quantityInput}
                   keyboardType="numeric"
+                  placeholder="Enter stock to add (e.g. 10)"
                   value={editQuantity}
                   onChangeText={setEditQuantity}
                   selectTextOnFocus
                   autoFocus
                 />
+
+                {/* Preview New Total */}
+                {editQuantity && !isNaN(parseInt(editQuantity)) && (
+                  <Text style={{ textAlign: 'center', color: '#0F766E', marginBottom: 10 }}>
+                    New Total: {selectedItem.quantity + parseInt(editQuantity)}
+                  </Text>
+                )}
 
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
@@ -1270,7 +1332,7 @@ export default function InventoryScreen() {
                   </TouchableOpacity>
 
                   <TouchableOpacity style={styles.saveButton} onPress={handleSaveQuantity}>
-                    <Text style={{ color: "#fff", fontWeight: '600' }}>Save</Text>
+                    <Text style={{ color: "#fff", fontWeight: '600' }}>Add Stock</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -1311,12 +1373,14 @@ export default function InventoryScreen() {
                 <Text style={styles.modalTitle}>{isExistingItem ? "Update Stock" : "Add New Item"}</Text>
 
                 {isSearchingDetail ? (
-                  <ActivityIndicator size="small" color="#0F766E" style={{ margin: 10 }} />
-                ) : (
+                  <Text style={{ textAlign: 'center', color: '#6B7280', marginBottom: 10 }}>
+                    Checking item...
+                  </Text>
+                ) : addBarcode.length >= 3 ? (
                   <Text style={{ textAlign: 'center', color: isExistingItem ? 'green' : 'orange', marginBottom: 10 }}>
                     {isExistingItem ? "✓ Item recognized in Inventory" : "New Item Detected"}
                   </Text>
-                )}
+                ) : null}
 
                 <TextInput
                   style={styles.input}
@@ -1326,7 +1390,6 @@ export default function InventoryScreen() {
                   value={addBarcode}
                   onChangeText={(val) => {
                     setAddBarcode(val);
-                    handleBarcodeSearch(val);
                   }}
                 />
                 <TextInput style={styles.input} placeholder="Name" value={addName} onChangeText={setAddName} />
