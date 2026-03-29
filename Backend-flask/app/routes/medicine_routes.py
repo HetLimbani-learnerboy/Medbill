@@ -29,6 +29,7 @@ def get_medicine_by_barcode(barcode):
         return jsonify({"message": "Medicine not found"}), 404
 
     return jsonify({
+        "found": True,
         "barcode": med.barcode,
         "medicine_name": med.medicine_name,
         "company": med.company,
