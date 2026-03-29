@@ -918,6 +918,7 @@ export default function InventoryScreen() {
   const [addDistributor, setAddDistributor] = useState('');
   const [newStockInput, setNewStockInput] = useState('0'); // For current + new logic
 
+
   useEffect(() => {
     const delay = setTimeout(() => {
       if (addBarcode.length >= 3 && addModalVisible && !isSearchingDetail) {
@@ -1176,6 +1177,12 @@ export default function InventoryScreen() {
         setAddCompany(data.company || '');
         setAddPrice(data.price?.toString() || '');
         setAddQuantity(data.quantity?.toString() || '0');
+
+        setAddCategory(data.category || 'Tablet');
+        setAddComposition(data.composition || '');
+        setAddDistributor(data.distributor || '');
+        setAddExpiry(data.expiry_date || '');
+
         setNewStockInput('0');
 
       } else if (res.status === 404) {
@@ -1371,14 +1378,18 @@ export default function InventoryScreen() {
             <View style={[styles.modalContent, { maxHeight: '90%' }]}>
               <ScrollView showsVerticalScrollIndicator={false}>
                 <Text style={styles.modalTitle}>{isExistingItem ? "Update Stock" : "Add New Item"}</Text>
-
                 {isSearchingDetail ? (
-                  <Text style={{ textAlign: 'center', color: '#6B7280', marginBottom: 10 }}>
-                    Checking item...
-                  </Text>
+                  <View style={{ alignItems: 'center', marginBottom: 10 }}>
+                    <ActivityIndicator size="small" color="#0F766E" />
+                    <Text style={{ color: '#6B7280', marginTop: 5 }}>Checking inventory...</Text>
+                  </View>
                 ) : addBarcode.length >= 3 ? (
-                  <Text style={{ textAlign: 'center', color: isExistingItem ? 'green' : 'orange', marginBottom: 10 }}>
-                    {isExistingItem ? "✓ Item recognized in Inventory" : "New Item Detected"}
+                  <Text style={{
+                    textAlign: 'center',
+                    color: isExistingItem ? 'green' : 'orange',
+                    marginBottom: 10
+                  }}>
+                    {isExistingItem ? "✓ Item Found in Inventory" : "New Item Detected"}
                   </Text>
                 ) : null}
 

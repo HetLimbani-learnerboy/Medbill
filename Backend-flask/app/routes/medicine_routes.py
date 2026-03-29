@@ -29,12 +29,19 @@ def get_medicine_by_barcode(barcode):
         return jsonify({"message": "Medicine not found"}), 404
 
     return jsonify({
-        "found": True,
-        "barcode": med.barcode,
-        "medicine_name": med.medicine_name,
-        "company": med.company,
-        "price": med.price,
-        "quantity": med.quantity
+    "found": True,
+    "barcode": med.barcode,
+    "medicine_name": med.medicine_name,
+    "company": med.company,
+    "category": med.category,
+    "composition": med.composition,
+    "price": med.price,
+    "quantity": med.quantity,
+    "manufacture_date": med.manufacture_date.strftime("%Y-%m-%d") if med.manufacture_date else None,
+    "expiry_date": med.expiry_date.strftime("%Y-%m-%d") if med.expiry_date else None,
+    "distributor": med.distributor,
+    "discount": med.discount,
+    "tax_percentage": med.tax_percentage
     }), 200
     
 @medicine_bp.route("/api/inventory/search", methods=["GET"])
@@ -77,9 +84,13 @@ def add_medicine():
 
     price = float(data.get("price", 0))
     quantity = int(data.get("quantity", 0))
-    expiry_date = None
-    if data.get("expiry_date"):
-        expiry_date = datetime.strptime(data.get("expiry_date"), "%Y-%m-%d").date()
+    expiry_input = data.get("expiry_date")
+    
+    if expiry_input and expiry_input.strip() != "":
+        try:
+            expiry_date = datetime.strptime(expiry_input, "%Y-%m-%d").date()
+        except:
+            return jsonify({"message": "Invalid expiry_date format (YYYY-MM-DD required)"}), 400
     else:
         expiry_date = datetime.utcnow().date() + timedelta(days=365*2)
 
