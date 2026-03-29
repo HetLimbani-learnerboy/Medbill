@@ -6,11 +6,10 @@ class Medicine(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    medicine_id = db.Column(
+    barcode = db.Column(
         db.String(30),
         unique=True,
         nullable=False,
-        default=lambda: f"MED-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
     )
 
     medicine_name = db.Column(db.String(100), unique=True, nullable=False)
