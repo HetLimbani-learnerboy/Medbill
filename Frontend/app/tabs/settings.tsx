@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../AuthContext';
 import React, { useState } from 'react';
+import { router } from "expo-router";
 import {
   Alert, Platform,
   SafeAreaView,
@@ -36,14 +38,20 @@ export default function SettingsScreen() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [scannerBeep, setScannerBeep] = useState<boolean>(true);
   const [autoPrintReceipt, setAutoPrintReceipt] = useState<boolean>(true);
-
+  const { logout } = useAuth();
   const navigation: any = useNavigation();
 
-  // --- Handlers ---
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Log Out", style: "destructive", onPress: () => console.log("Logged out") }
+      { 
+      text: "Log Out", 
+      style: "destructive", 
+      onPress: () => {
+        logout();
+        router.replace("../LandingPage");
+      }
+    }
     ]);
   };
 

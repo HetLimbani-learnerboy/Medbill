@@ -56,12 +56,12 @@ export default function ReceiptsDashboard() {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
   // --- Add these to your state variables ---
-	const [fromDate, setFromDate] = useState<Date | null>(null);
-	const [toDate, setToDate] = useState<Date | null>(null);
-	const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-	const [datePickerType, setDatePickerType] = useState<'from' | 'to'>('from');
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [datePickerType, setDatePickerType] = useState<'from' | 'to'>('from');
 
-	// For Printing
+  // For Printing
   const receiptRef = useRef(null);
 
   const handleShareReceiptUI = async () => {
@@ -79,30 +79,30 @@ export default function ReceiptsDashboard() {
     }
   };
 
-	//  Helper Functions for date picker
-const openDatePicker = (type: 'from' | 'to') => {
-  setDatePickerType(type);
-  setShowDatePicker(true);
-};
+  //  Helper Functions for date picker
+  const openDatePicker = (type: 'from' | 'to') => {
+    setDatePickerType(type);
+    setShowDatePicker(true);
+  };
 
-const handleDateChange = (event: any, selectedDate?: Date) => {
-  setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS, close on Android
-  if (selectedDate) {
-    if (datePickerType === 'from') {
-      setFromDate(selectedDate);
-    } else {
-      setToDate(selectedDate);
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS, close on Android
+    if (selectedDate) {
+      if (datePickerType === 'from') {
+        setFromDate(selectedDate);
+      } else {
+        setToDate(selectedDate);
+      }
     }
-  }
-  if (Platform.OS === 'android') {
-    setShowDatePicker(false);
-  }
-};
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+  };
 
-const clearDates = () => {
-  setFromDate(null);
-  setToDate(null);
-};
+  const clearDates = () => {
+    setFromDate(null);
+    setToDate(null);
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -153,15 +153,78 @@ const clearDates = () => {
     fetchAnalytics();
   }, []);
 
-  const filteredReceipts = useMemo(() => {
-    if (!searchQuery) return receipts;
-    const query = searchQuery.toLowerCase();
-    return receipts.filter((item) =>
-      item.customerName?.toLowerCase().includes(query) ||
-      item.customerPhone?.toLowerCase().includes(query) ||
-      item.billAmount.toString().includes(query)
+  const parseCustomDate = (dateStr: string) => {
+  try {
+    const [datePart, timePart] = dateStr.split(', ');
+
+    const [day, monthStr, year] = datePart.split(' ');
+
+    const months: any = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+    };
+
+    let [time, modifier] = timePart.split(' ');
+    let [hours, minutes] = time.split(':');
+
+    let h = parseInt(hours);
+    const m = parseInt(minutes);
+
+    if (modifier === 'PM' && h !== 12) h += 12;
+    if (modifier === 'AM' && h === 12) h = 0;
+
+    return new Date(
+      parseInt(year),
+      months[monthStr],
+      parseInt(day),
+      h,
+      m
     );
-  }, [searchQuery, receipts]);
+  } catch {
+    return new Date(); 
+  }
+};
+
+  const filteredReceipts = useMemo(() => {
+    let filtered = [...receipts];
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((item) =>
+        item.customerName?.toLowerCase().includes(query) ||
+        item.customerPhone?.toLowerCase().includes(query) ||
+        item.billAmount.toString().includes(query)
+      );
+    }
+
+    if (fromDate || toDate) {
+      filtered = filtered.filter((item) => {
+        const receiptDate = parseCustomDate(item.dateTime);
+        const receiptTime = receiptDate.getTime();
+
+        if (fromDate) {
+          const start = new Date(fromDate);
+          start.setHours(0, 0, 0, 0);
+          if (receiptTime < start.getTime()) return false;
+        }
+
+        if (toDate) {
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+          if (receiptTime > end.getTime()) return false;
+        }
+
+        return true;
+      });
+    }
+
+    return filtered.sort(
+      (a, b) =>
+        parseCustomDate(b.dateTime).getTime() -
+        parseCustomDate(a.dateTime).getTime()
+    );
+
+  }, [searchQuery, receipts, fromDate, toDate]);
 
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
@@ -217,8 +280,8 @@ const clearDates = () => {
 
       {/* NEW: Date Filters */}
       <View style={styles.dateFilterRow}>
-        <TouchableOpacity 
-          style={styles.dateInput} 
+        <TouchableOpacity
+          style={styles.dateInput}
           onPress={() => openDatePicker('from')}
         >
           <Ionicons name="calendar-outline" size={18} color={fromDate ? "#0F766E" : "#9CA3AF"} />
@@ -229,8 +292,8 @@ const clearDates = () => {
 
         <Text style={styles.dateSeparator}></Text>
 
-        <TouchableOpacity 
-          style={styles.dateInput} 
+        <TouchableOpacity
+          style={styles.dateInput}
           onPress={() => openDatePicker('to')}
         >
           <Ionicons name="calendar-outline" size={18} color={toDate ? "#0F766E" : "#9CA3AF"} />
@@ -242,7 +305,7 @@ const clearDates = () => {
         {/* Clear Button (only shows if a date is selected) */}
         {(fromDate || toDate) && (
           <TouchableOpacity onPress={clearDates} style={styles.clearDateBtn}>
-             <Ionicons name="close-circle" size={20} color="#EF4444" />
+            <Ionicons name="close-circle" size={20} color="#EF4444" />
           </TouchableOpacity>
         )}
       </View>
@@ -254,7 +317,7 @@ const clearDates = () => {
           {/* Dark background overlay */}
           <View style={styles.datePickerModalOverlay}>
             <View style={styles.datePickerModalContent}>
-              
+
               {/* Header with a Done button */}
               <View style={styles.datePickerHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
@@ -308,11 +371,11 @@ const clearDates = () => {
           <View style={styles.modalContent}>
             {selectedReceipt && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                
+
                 {/* --- WRAPPER FOR SCREENSHOT --- */}
-                <View 
-                  ref={receiptRef} 
-                  collapsable={false} 
+                <View
+                  ref={receiptRef}
+                  collapsable={false}
                   style={{ backgroundColor: '#FFFFFF', padding: 10 }}
                 >
                   <View style={styles.modalHeader}>
@@ -348,16 +411,16 @@ const clearDates = () => {
 
                     <View style={styles.calculationContainer}>
                       <View style={styles.calcRow}>
-                          <Text style={styles.calcLabel}>GST ({selectedReceipt.gst_percent}%)</Text>
-                          <Text style={styles.calcValue}>₹{selectedReceipt.gst_amount.toFixed(2)}</Text>
+                        <Text style={styles.calcLabel}>GST ({selectedReceipt.gst_percent}%)</Text>
+                        <Text style={styles.calcValue}>₹{selectedReceipt.gst_amount.toFixed(2)}</Text>
                       </View>
                       <View style={styles.calcRow}>
-                          <Text style={styles.calcLabel}>Offer ({selectedReceipt.offer_percent}%)</Text>
-                          <Text style={[styles.calcValue, styles.offerValue]}>
+                        <Text style={styles.calcLabel}>Offer ({selectedReceipt.offer_percent}%)</Text>
+                        <Text style={[styles.calcValue, styles.offerValue]}>
                           -₹{selectedReceipt.offer_amount.toFixed(2)}
-                          </Text>
+                        </Text>
                       </View>
-                     </View>
+                    </View>
 
                     <View style={styles.totalRow}>
                       <Text style={styles.totalLabel}>Grand Total</Text>
@@ -405,162 +468,162 @@ const clearDates = () => {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F3F4F6' },
-    listContent: { padding: 16 },
-    searchContainerOuter: {
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 10,
-        backgroundColor: '#F3F4F6',
-    },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  listContent: { padding: 16 },
+  searchContainerOuter: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: '#F3F4F6',
+  },
 
-    // --- iOS Date Picker Modal Styles ---
-    datePickerModalOverlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.4)', // Dims the background
-    },
-    datePickerModalContent: {
-      backgroundColor: '#FFFFFF',
-      paddingBottom: 0, // Safe area padding
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
-    },
-    datePickerHeader: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      padding: 16,
-      backgroundColor: '#F3F4F6',
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: '#E5E7EB',
-    },
-    datePickerDoneText: {
-      color: '#0F766E',
-      fontWeight: 'bold',
-      fontSize: 16,
-    },
+  // --- iOS Date Picker Modal Styles ---
+  datePickerModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)', // Dims the background
+  },
+  datePickerModalContent: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 0, // Safe area padding
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: '#F3F4F6',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  datePickerDoneText: {
+    color: '#0F766E',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 
-		// --- Date Filter Styles ---
-		dateFilterRow: {
-      flexDirection: 'row',
-			alignItems: 'center',
-			paddingHorizontal: 16,
-			marginBottom: 16,
-		},
-		dateInput: {
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      height: 50,
-			flex: 1,
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: '#FFFFFF',
-			borderWidth: 1,
-			borderColor: '#D1D5DB',
-			paddingVertical: 10,
-		},
-		dateText: {
-			fontSize: 14,
-			color: '#9CA3AF',
-			marginLeft: 8,
-		},
-		dateTextActive: {
-			color: '#111827',
-			fontWeight: '500',
-		},
-		dateSeparator: {
-			marginHorizontal: 8,
-			color: '#6B7280',
-			fontWeight: 'bold',
-		},
-		clearDateBtn: {
-			marginLeft: 8,
-			padding: 4,
-		},
+  // --- Date Filter Styles ---
+  dateFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  dateInput: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 50,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingVertical: 10,
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginLeft: 8,
+  },
+  dateTextActive: {
+    color: '#111827',
+    fontWeight: '500',
+  },
+  dateSeparator: {
+    marginHorizontal: 8,
+    color: '#6B7280',
+    fontWeight: 'bold',
+  },
+  clearDateBtn: {
+    marginLeft: 8,
+    padding: 4,
+  },
 
-    // --- Calculation Area Styles (GST & Offers) ---
-    calculationContainer: { 
-        marginTop: 8, 
-        paddingTop: 12, 
-        borderTopWidth: 1, 
-        borderTopColor: '#F3F4F6' // Very subtle separator after items
-    },
-    calcRow: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        marginBottom: 4 
-    },
-    calcLabel: { 
-        fontSize: 14, 
-        color: '#6B7280', // Muted text for labels
-        fontWeight: '400'
-    },
-    calcValue: { 
-        fontSize: 14, 
-        fontWeight: '500', 
-        color: '#374151' 
-    },
-    offerValue: { 
-        color: '#10B981', // A pleasant green to indicate savings
-        fontWeight: '600'
-    },
-    // Add these inside your styles = StyleSheet.create({ ... })
-    statsContainer: { 
-        marginTop: -12,
-        marginBottom: 10, 
-        paddingHorizontal: 8 
-    },
-    headerTitleRow: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 12 
-    },
-    sectionTitle: { 
-        fontSize: 18, 
-        fontWeight: '700', 
-        color: '#111827' 
-    },
-    statsRow: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between' 
-    },
-    statCard: { 
-        flex: 1, 
-        backgroundColor: '#FFFFFF', 
-        padding: 16, 
-        borderRadius: 12, 
-        marginHorizontal: 4, 
-        elevation: 2, 
-        shadowColor: '#000', 
-        shadowOpacity: 0.05, 
-        shadowRadius: 4 
-    },
-    statValue: { 
-        fontSize: 22, 
-        fontWeight: 'bold', 
-        color: '#111827', 
-        marginTop: 8 
-    },
-    statLabel: { 
-        fontSize: 12, 
-        color: '#6B7280', 
-        marginTop: 4 
-    },
-    statTrendUp: { 
-        fontSize: 11, 
-        color: '#10B981', 
-        marginTop: 8, 
-        fontWeight: '500' 
-    },
-    sectionHeading: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#374151',
-        marginBottom: 8,
-    },
+  // --- Calculation Area Styles (GST & Offers) ---
+  calculationContainer: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6' // Very subtle separator after items
+  },
+  calcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
+  calcLabel: {
+    fontSize: 14,
+    color: '#6B7280', // Muted text for labels
+    fontWeight: '400'
+  },
+  calcValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151'
+  },
+  offerValue: {
+    color: '#10B981', // A pleasant green to indicate savings
+    fontWeight: '600'
+  },
+  // Add these inside your styles = StyleSheet.create({ ... })
+  statsContainer: {
+    marginTop: -12,
+    marginBottom: 10,
+    paddingHorizontal: 8
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 8
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4
+  },
+  statTrendUp: {
+    fontSize: 11,
+    color: '#10B981',
+    marginTop: 8,
+    fontWeight: '500'
+  },
+  sectionHeading: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 8,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -579,26 +642,26 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     height: '100%',
   },
- refreshCard: { 
-  flex: 1, 
-  backgroundColor: '#FFFFFF', 
-  padding: 16, 
-  borderRadius: 12, 
-  marginHorizontal: 4, 
-  elevation: 2, 
-  shadowColor: '#000', 
-  shadowOpacity: 0.05, 
-  shadowRadius: 4,
-  justifyContent: 'center', 
-  alignItems: 'center',    
-},
+  refreshCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   refreshLabel: {
     fontSize: 12,
-    color: '#6B7280', 
+    color: '#6B7280',
     fontWeight: '600',
     marginTop: 4
   },
-  
+
   receiptCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3 },
   receiptHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   customerName: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
