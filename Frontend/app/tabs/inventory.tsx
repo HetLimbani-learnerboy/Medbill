@@ -405,7 +405,7 @@
 //   const [editQuantity, setEditQuantity] = useState('');
 
 //   const [addModalVisible, setAddModalVisible] = useState(false);
-  
+
 //   // Add these new states
 //   const [permission, requestPermission] = useCameraPermissions();
 //   const [scannerModalVisible, setScannerModalVisible] = useState(false);
@@ -870,7 +870,8 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  ActivityIndicator
+  ActivityIndicator,
+  ScrollView
 } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
@@ -906,6 +907,16 @@ export default function InventoryScreen() {
   const [addCompany, setAddCompany] = useState('');
   const [addPrice, setAddPrice] = useState('');
   const [addQuantity, setAddQuantity] = useState('');
+  const [isExistingItem, setIsExistingItem] = useState(false);
+  const [isSearchingDetail, setIsSearchingDetail] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // New Fields for Medicine Model
+  const [addCategory, setAddCategory] = useState('Tablet');
+  const [addComposition, setAddComposition] = useState('');
+  const [addExpiry, setAddExpiry] = useState('');
+  const [addDistributor, setAddDistributor] = useState('');
+  const [newStockInput, setNewStockInput] = useState('0'); // For current + new logic
 
   // Reset function to clear states and close modal
   const resetAddModal = () => {
@@ -920,49 +931,85 @@ export default function InventoryScreen() {
 
   // Search logic for scanned barcode
   const searchInventoryProductDetails = async (scannedBarcode: string) => {
-    // 1. Search local inventory first
-    const existingItem = inventory.find(item => item.id === scannedBarcode);
+    setIsSearchingDetail(true);
+    setIsExistingItem(false);
+    setShowAdvanced(false);
 
-    if (existingItem) {
-      // Prefill everything if found in inventory
-      setAddBarcode(scannedBarcode);
-      setAddName(existingItem.name);
-      setAddCompany(existingItem.company);
-      setAddPrice(existingItem.price.toString());
-      setAddQuantity(existingItem.quantity.toString());
-    } else {
-      // 2. Not found in inventory, search external API (OpenFoodFacts as an example)
-      try {
+    try {
+      const res = await fetch(`${API_URL}/inventory/${scannedBarcode}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsExistingItem(true);
+        setAddBarcode(scannedBarcode);
+        setAddName(data.medicine_name);
+        setAddCompany(data.company);
+        setAddPrice(data.price.toString());
+        setAddQuantity(data.quantity.toString()); // Total currently in DB
+        setNewStockInput('0');
+      } else {
+        // Not in DB, try external API
         const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${scannedBarcode}.json`);
         const result = await response.json();
-
-        if (result.status === 1 && result.product) {
-          setAddBarcode(scannedBarcode);
-          setAddName(result.product.product_name || '');
-          setAddCompany(result.product.brands || ''); // Map brands to company
-          setAddPrice('');
-          setAddQuantity('');
-        } else {
-          // Fallback if not found in DB or API
-          setAddBarcode(scannedBarcode);
-          setAddName('');
-          setAddCompany('');
-          setAddPrice('');
-          setAddQuantity('');
-        }
-      } catch (error) {
-        console.error("API Fetch error", error);
         setAddBarcode(scannedBarcode);
+        setIsExistingItem(false);
+        setAddName(result.product?.product_name || '');
+        setAddCompany(result.product?.brands || '');
+        setAddPrice('');
+        setAddQuantity('0');
       }
+    } catch (error) {
+      setAddBarcode(scannedBarcode);
+    } finally {
+      setIsSearchingDetail(false);
+    }
+  };
+
+  const handleSaveOrAdd = async () => {
+    const method = isExistingItem ? "PUT" : "POST";
+    const endpoint = isExistingItem ? `${API_URL}/inventory/${addBarcode}` : `${API_URL}/inventory`;
+
+    // Define the base object with a flexible type [key: string]: any
+    const payload: any = {
+      barcode: addBarcode,
+      medicine_name: addName,
+      company: addCompany,
+      price: parseFloat(addPrice),
+      category: addCategory,
+      composition: addComposition,
+      distributor: addDistributor,
+      expiry_date: addExpiry || new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+
+    if (isExistingItem) {
+      // Now this won't give a red line because the type is 'any'
+      payload.new_stock = parseInt(newStockInput, 10) || 0;
+    } else {
+      payload.quantity = parseInt(addQuantity, 10) || 0;
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        Alert.alert("Success", isExistingItem ? "Stock Updated" : "Added to Inventory");
+        fetchInventory();
+        resetAddModal();
+      }
+    } catch (e) {
+      Alert.alert("Error", "Server connection failed");
     }
   };
 
   const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
     if (isScanning) return;
     setIsScanning(true); // Prevent multiple scans at once
-    
-    await searchInventoryProductDetails(data);
-    
+
+    await handleBarcodeSearch(data);
+
     setScannerModalVisible(false); // Close camera
     setAddModalVisible(true);      // Open the details modal
   };
@@ -980,12 +1027,18 @@ export default function InventoryScreen() {
       const res = await fetch(`${API_URL}/inventory`);
       const data = await res.json();
 
+      if (!Array.isArray(data)) {
+        setInventory([]);
+        return;
+      }
+
       const mapped = data.map((m: any) => ({
-        id: m.medicine_id.toString(), // Assuming this acts as the barcode
-        name: m.medicine_name,
-        company: m.company,
-        price: m.price,
-        quantity: m.quantity
+        // Safety fix: Use String() and provide a fallback to prevent .toString() errors
+        id: m.barcode ? String(m.barcode) : (m.medicine_id ? String(m.medicine_id) : Math.random().toString()),
+        name: m.medicine_name || "Unknown Medicine",
+        company: m.company || "Unknown Company",
+        price: Number(m.price) || 0,
+        quantity: Number(m.quantity) || 0
       }));
 
       setInventory(mapped);
@@ -1025,11 +1078,12 @@ export default function InventoryScreen() {
 
   const handleSaveQuantity = async () => {
     if (!selectedItem) return;
+
     const qty = parseInt(editQuantity, 10);
 
     try {
       const res = await fetch(
-        `${API_URL}/inventory/medicine-name/${encodeURIComponent(selectedItem.name)}`,
+        `${API_URL}/inventory/${selectedItem.id}`, 
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -1040,18 +1094,15 @@ export default function InventoryScreen() {
       if (res.ok) {
         fetchInventory();
         setModalVisible(false);
-      } else {
-        const errorData = await res.json();
-        Alert.alert("Update Failed", errorData.message || "Could not update stock");
       }
-    } catch (error) {
-      Alert.alert("Network Error", "Check your backend connection");
+    } catch {
+      Alert.alert("Error", "Update failed");
     }
   };
 
   const handleAddItem = async () => {
     if (!addName || !addPrice || !addQuantity) {
-      Alert.alert("Missing Fields", "Please enter all the required fields");
+      Alert.alert("Missing Fields", "Please enter Name, Price, and Quantity.");
       return;
     }
 
@@ -1060,22 +1111,54 @@ export default function InventoryScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Include barcode here if your backend accepts it: barcode: addBarcode,
+          barcode: addBarcode, // Added this back!
           medicine_name: addName,
           company: addCompany || "Default Company",
           price: parseFloat(addPrice),
-          quantity: parseInt(addQuantity, 10)
+          quantity: parseInt(addQuantity, 10),
+          // Adding default dates so your backend model doesn't crash
+          expiry_date: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         })
       });
 
       if (res.status === 201) {
         fetchInventory();
-        resetAddModal(); // Close modal & reset fields
+        resetAddModal();
+        Alert.alert("Success", "Item added to stock.");
       } else {
-        Alert.alert("Error", "Medicine already exists in stock and update the existing record instead or Failed to add medicine to inventory");
+        const err = await res.json();
+        Alert.alert("Error", err.message || "Failed to add medicine.");
       }
     } catch (error) {
       Alert.alert("Network Error", "Check your backend connection");
+    }
+  };
+  const handleBarcodeSearch = async (barcode: string) => {
+    if (!barcode || barcode.length < 3) return;
+
+    setIsSearchingDetail(true);
+
+    try {
+      const res = await fetch(`${API_URL}/inventory/${barcode}`);
+
+      if (res.ok) {
+        const data = await res.json();
+
+        setIsExistingItem(true);
+        setAddName(data.medicine_name);
+        setAddCompany(data.company);
+        setAddPrice(data.price.toString());
+        setAddQuantity(data.quantity.toString());
+        setNewStockInput('0');
+
+      } else {
+        setIsExistingItem(false);
+      }
+
+    } catch (err) {
+      console.log("Barcode fetch error", err);
+    } finally {
+      setIsSearchingDetail(false);
     }
   };
 
@@ -1146,8 +1229,8 @@ export default function InventoryScreen() {
       )}
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         onPress={async () => {
           if (!permission?.granted) {
             const res = await requestPermission();
@@ -1220,54 +1303,78 @@ export default function InventoryScreen() {
       </Modal>
 
       {/* Add Modal */}
-      <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={resetAddModal}>
+      <Modal visible={addModalVisible} transparent animationType="slide">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={[styles.modalTitle, { marginBottom: 15 }]}>Add New Item</Text>
+          <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalTitle}>{isExistingItem ? "Update Stock" : "Add New Item"}</Text>
 
-              <TextInput style={styles.input} placeholder="Barcode Number"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="numeric"
-                value={addBarcode}
-                onChangeText={setAddBarcode}
-              />
+                {isSearchingDetail ? (
+                  <ActivityIndicator size="small" color="#0F766E" style={{ margin: 10 }} />
+                ) : (
+                  <Text style={{ textAlign: 'center', color: isExistingItem ? 'green' : 'orange', marginBottom: 10 }}>
+                    {isExistingItem ? "✓ Item recognized in Inventory" : "New Item Detected"}
+                  </Text>
+                )}
 
-              <TextInput style={styles.input} placeholder="Medicine Name"
-                placeholderTextColor="#9CA3AF"
-                value={addName}
-                onChangeText={setAddName}
-              />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Barcode Number"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                  value={addBarcode}
+                  onChangeText={(val) => {
+                    setAddBarcode(val);
+                    handleBarcodeSearch(val);
+                  }}
+                />
+                <TextInput style={styles.input} placeholder="Name" value={addName} onChangeText={setAddName} />
 
-              <TextInput style={styles.input} placeholder="Company Name"
-                placeholderTextColor="#9CA3AF"
-                value={addCompany}
-                onChangeText={setAddCompany}
-              />
+                {isExistingItem ? (
+                  <View style={{ backgroundColor: '#F0FDFA', padding: 10, borderRadius: 8, marginBottom: 10 }}>
+                    <Text style={{ fontSize: 12, color: '#0F766E' }}>Current Stock: {addQuantity}</Text>
+                    <TextInput
+                      style={[styles.input, { marginTop: 5, borderColor: '#0F766E', borderWidth: 2 }]}
+                      placeholder="Add New Quantity (e.g. +10)"
+                      keyboardType="numeric"
+                      value={newStockInput}
+                      onChangeText={setNewStockInput}
+                    />
+                  </View>
+                ) : (
+                  <TextInput style={styles.input} placeholder="Initial Quantity" keyboardType="numeric" value={addQuantity} onChangeText={setAddQuantity} />
+                )}
 
-              <TextInput style={styles.input} placeholder="Price (₹)"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="numeric"
-                value={addPrice}
-                onChangeText={setAddPrice}
-              />
+                <TextInput style={styles.input} placeholder="Price" keyboardType="numeric" value={addPrice} onChangeText={setAddPrice} />
 
-              <TextInput style={styles.input} placeholder="Current Quantity"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="numeric"
-                value={addQuantity}
-                onChangeText={setAddQuantity}
-              />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelButton} onPress={resetAddModal}>
-                  <Text style={{ color: '#6B7280' }}>Cancel</Text>
+                {/* Collapsible Advanced Info */}
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 10, justifyContent: 'center' }}
+                  onPress={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <Text style={{ color: '#0F766E', fontWeight: 'bold' }}>{showAdvanced ? "Hide More Info" : "Show More Info"}</Text>
+                  <Ionicons name={showAdvanced ? "chevron-up" : "chevron-down"} size={20} color="#0F766E" />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.saveButton, { flex: 1 }]} onPress={handleAddItem}>
-                  <Text style={{ color: "#fff", fontWeight: '600' }}>Add to Inventory</Text>
-                </TouchableOpacity>
-              </View>
 
+                {showAdvanced && (
+                  <View style={{ borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 10 }}>
+                    <TextInput style={styles.input} placeholder="Category (Tablet/Syrup)" value={addCategory} onChangeText={setAddCategory} />
+                    <TextInput style={styles.input} placeholder="Composition" value={addComposition} onChangeText={setAddComposition} />
+                    <TextInput style={styles.input} placeholder="Expiry Date (YYYY-MM-DD)" value={addExpiry} onChangeText={setAddExpiry} />
+                    <TextInput style={styles.input} placeholder="Distributor" value={addDistributor} onChangeText={setAddDistributor} />
+                  </View>
+                )}
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={resetAddModal}>
+                    <Text>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={handleSaveOrAdd}>
+                    <Text style={{ color: '#fff' }}>{isExistingItem ? "Update Inventory" : "Save Item"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             </View>
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
@@ -1349,7 +1456,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)' 
+    backgroundColor: 'rgba(0,0,0,0.2)'
   },
   targetBox: {
     width: 260,
@@ -1357,12 +1464,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: '#FFF', 
+    borderColor: '#FFF',
   },
   hintText: {
     color: '#F0FDFA',
     marginTop: 24,
-    backgroundColor: 'rgba(0,0,0,0.7)', 
+    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,

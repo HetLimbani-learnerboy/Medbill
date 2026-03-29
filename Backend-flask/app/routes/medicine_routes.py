@@ -63,27 +63,39 @@ def search_medicine():
 def add_medicine():
     data = request.get_json()
 
-    if not data.get("barcode") or not data.get("medicine_name"):
+    barcode = data.get("barcode")
+    name = data.get("medicine_name")
+
+    if not barcode or not name:
         return jsonify({"message": "Barcode and Medicine Name required"}), 400
 
-    # Prevent duplicate barcode
-    existing = Medicine.query.filter_by(barcode=data.get("barcode")).first()
+    existing = Medicine.query.filter_by(barcode=barcode).first()
     if existing:
         return jsonify({"message": "Medicine with this barcode already exists"}), 400
 
+    price = float(data.get("price", 0))
+    quantity = int(data.get("quantity", 0))
+    expiry_date = None
+    if data.get("expiry_date"):
+        expiry_date = datetime.strptime(data.get("expiry_date"), "%Y-%m-%d").date()
+    else:
+        expiry_date = datetime.utcnow().date() + timedelta(days=365*2)
+
+    manufacture_date = datetime.utcnow().date()
+
     new_medicine = Medicine(
-        barcode=data.get("barcode"),
-        medicine_name=data.get("medicine_name"),
-        company=data.get("company"),
+        barcode=barcode,
+        medicine_name=name,
+        company=data.get("company", "Unknown"),
         category=data.get("category", "General"),
         composition=data.get("composition", "Not Specified"),
-        price=data.get("price", 0),
-        quantity=data.get("quantity", 0),
-        manufacture_date=data.get("manufacture_date"),
-        expiry_date=data.get("expiry_date"),
-        distributor=data.get("distributor"),
-        discount=data.get("discount", 0.0),
-        tax_percentage=data.get("tax_percentage", 0.0)
+        price=price,
+        quantity=quantity,
+        manufacture_date=manufacture_date,
+        expiry_date=expiry_date,
+        distributor=data.get("distributor", "Default Distributor"),
+        discount=float(data.get("discount", 0.0)),
+        tax_percentage=float(data.get("tax_percentage", 0.0))
     )
 
     db.session.add(new_medicine)
@@ -92,29 +104,34 @@ def add_medicine():
     return jsonify({"message": "Medicine added successfully"}), 201
 
 
+# Updated PUT route in medicine_bp.py
 @medicine_bp.route("/api/inventory/<string:barcode>", methods=["PUT"])
 def update_medicine(barcode):
     data = request.get_json()
 
     med = Medicine.query.filter_by(barcode=barcode).first()
-
     if not med:
         return jsonify({"message": "Medicine not found"}), 404
 
-    # Update fields dynamically
+    if "new_stock" in data:
+        med.quantity += int(data.get("new_stock", 0))
+    elif "quantity" in data:
+        med.quantity = int(data.get("quantity", med.quantity))
+
     med.medicine_name = data.get("medicine_name", med.medicine_name)
     med.company = data.get("company", med.company)
     med.category = data.get("category", med.category)
     med.composition = data.get("composition", med.composition)
-    med.price = data.get("price", med.price)
-    med.quantity = data.get("quantity", med.quantity)
+
+    if data.get("price") is not None:
+        med.price = float(data.get("price"))
+
     med.distributor = data.get("distributor", med.distributor)
-    med.discount = data.get("discount", med.discount)
-    med.tax_percentage = data.get("tax_percentage", med.tax_percentage)
+    if data.get("expiry_date"):
+        med.expiry_date = datetime.strptime(data.get("expiry_date"), "%Y-%m-%d").date()
 
     db.session.commit()
-
     return jsonify({
-        "message": "Medicine updated successfully",
-        "barcode": med.barcode
-    })
+        "message": "Updated successfully",
+        "new_total": med.quantity
+    }), 200

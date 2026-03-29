@@ -47,64 +47,70 @@ export default function Index() {
   const [addPrice, setAddPrice] = useState('');
   const [addpriceplaceholder, setAddPricePlaceholder] = useState('');
   const [addQuantity, setAddQuantity] = useState('1');
-
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
+    if (!addBarcode || addBarcode.length < 3) {
+      setIsNotFound(false);
+      return;
+    }
+
+    const fetchByBarcode = async () => {
+      setIsLoading(true);
+      setIsNotFound(false);
       try {
-        if (addBarcode && addBarcode.length >= 3) {
-          const res = await fetch(`${API_URL}/inventory/${addBarcode}`);
-
-          if (res.ok) {
-            const data = await res.json();
-
-            if (data.medicine_name !== addName) {
-              setAddName(data.medicine_name || '');
-            }
-
-            setAddCompany(data.company || '');
-            setAddPricePlaceholder(data.price?.toString() || '');
-
-            if (!addPrice) {
-              setAddPrice(data.price?.toString() || '');
-            }
-          }
-
-          return;
+        const res = await fetch(`${API_URL}/inventory/${addBarcode}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAddName(data.medicine_name || '');
+          setAddCompany(data.company || '');
+          setAddPricePlaceholder(data.price?.toString() || '');
+        } else if (res.status === 404) {
+          setIsNotFound(true);
         }
-
-        if (addName && addName.length >= 2) {
-          const res = await fetch(`${API_URL}/inventory/search?name=${addName}`);
-
-          if (res.ok) {
-            const data = await res.json();
-
-            if (data.length > 0) {
-              const item = data[0];
-
-              if (item.barcode !== addBarcode) {
-                setAddBarcode(item.barcode || '');
-              }
-
-              setAddCompany(item.company || '');
-              setAddPricePlaceholder(item.price?.toString() || '');
-
-              if (!addPrice) {
-                setAddPrice(item.price?.toString() || '');
-              }
-            }
-          }
-        }
-
       } catch (err) {
-        console.log("Search error", err);
+        console.log("Barcode fetch error", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    const timeout = setTimeout(fetchData, 300);
+    const timeout = setTimeout(fetchByBarcode, 500);
     return () => clearTimeout(timeout);
+  }, [addBarcode]);
 
-  }, [addName, addBarcode]);
+
+  useEffect(() => {
+    if (!addName || addName.length < 2 || addBarcode.length > 0) {
+      setIsNotFound(false);
+      return;
+    }
+
+    const fetchByName = async () => {
+      setIsLoading(true);
+      setIsNotFound(false);
+      try {
+        const res = await fetch(`${API_URL}/inventory/search?name=${addName}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            const item = data[0];
+            setAddBarcode(item.barcode || '');
+          } else {
+            setIsNotFound(true);
+          }
+        }
+      } catch (err) {
+        console.log("Name search error", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeout = setTimeout(fetchByName, 800);
+    return () => clearTimeout(timeout);
+  }, [addName]);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -152,6 +158,8 @@ export default function Index() {
     setAddCompany('');
     setAddPrice('');
     setAddQuantity('1');
+    setIsLoading(false);
+    setIsNotFound(false);
     setModalVisible(false);
     resetScanner();
   };
@@ -203,8 +211,8 @@ export default function Index() {
   // };
 
   const searchProductDetails = async (scannedBarcode: string) => {
-  setAddBarcode(scannedBarcode); // ✅ only trigger state
-};
+    setAddBarcode(scannedBarcode);
+  };
 
   const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
     if (isProcessing.current || modalVisible || billModalVisible) return;
@@ -217,17 +225,18 @@ export default function Index() {
   };
 
   const handleAddItemToCart = () => {
-    if (!addName || (!addPrice && !addpriceplaceholder)) {
-      Alert.alert("Missing Fields", "Please enter Name and Price.");
+    if (!addName || !addPrice) {
+      Alert.alert(
+        "Required Field",
+        "Please enter the Price."
+      );
       return;
     }
-
-    const finalPrice = addPrice || addpriceplaceholder;
 
     const newItem = {
       code: addBarcode || 'manual',
       name: addName,
-      price: parseFloat(finalPrice),
+      price: parseFloat(addPrice), // Use the user's manual input only
       quantity: parseInt(addQuantity, 10) || 1,
     };
 
@@ -286,19 +295,21 @@ export default function Index() {
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={[styles.modalTitle, { marginBottom: 15 }]}>Add to Cart</Text>
+              <View style={{ height: 20, marginVertical: 5, alignItems: 'center' }}>
+                {isLoading && <Text style={{ color: '#3B82F6', fontWeight: '600' }}>Fetching details...</Text>}
+                {isNotFound && <Text style={{ color: '#EF4444', fontWeight: '600' }}>Item not found in inventory</Text>}
+              </View>
 
               {/* Barcode Input */}
               <TextInput
-                style={styles.input}
+                style={[styles.input, isNotFound && { borderColor: '#FCA5A5' }]}
                 placeholder="Barcode Number (Optional)"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
                 value={addBarcode}
                 onChangeText={(val) => {
                   setAddBarcode(val);
-                  if (val.length >= 3) {
-                    searchProductDetails(val);
-                  }
+                  setIsNotFound(false);
                 }}
               />
 
@@ -308,7 +319,10 @@ export default function Index() {
                 placeholder="Item Name"
                 placeholderTextColor="#9CA3AF"
                 value={addName}
-                onChangeText={setAddName}
+                onChangeText={(val) => {
+                  setAddName(val);
+                  setIsNotFound(false);
+                }}
               />
               <TextInput
                 style={styles.input}
@@ -320,7 +334,7 @@ export default function Index() {
 
               <TextInput
                 style={styles.input}
-                placeholder={addpriceplaceholder ? `₹${addpriceplaceholder}` : "Enter Price"}
+                placeholder={addpriceplaceholder ? `Price: e.g.,₹${addpriceplaceholder}` : "Enter Price"}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
                 value={addPrice}
