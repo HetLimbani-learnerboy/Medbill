@@ -917,21 +917,24 @@ export default function InventoryScreen() {
   const [addExpiry, setAddExpiry] = useState('');
   const [addDistributor, setAddDistributor] = useState('');
   const [newStockInput, setNewStockInput] = useState('0'); // For current + new logic
+  const [hasScanned, setHasScanned] = useState(false);
 
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      if (addBarcode.length >= 3 && addModalVisible && !isSearchingDetail) {
-        handleBarcodeSearch(addBarcode);
-      }
-    }, 500);
+  if (!addModalVisible) return;
 
-    return () => clearTimeout(delay);
-  }, [addBarcode, addModalVisible]);
+  const delay = setTimeout(() => {
+    if (addBarcode.length >= 3) {
+      handleBarcodeSearch(addBarcode);
+    }
+  }, 500);
+
+  return () => clearTimeout(delay);
+}, [addBarcode, addModalVisible]);
 
   // Reset function to clear states and close modal
   const resetAddModal = () => {
-    setAddBarcode('');
+    setAddBarcode(prev => prev);
     setAddName('');
     setAddCompany('');
     setAddPrice('');
@@ -944,6 +947,7 @@ export default function InventoryScreen() {
     setShowAdvanced(false);
     setIsExistingItem(false);
     setAddModalVisible(false);
+    setHasScanned(false);
     setIsScanning(false);
   };
 
@@ -1028,16 +1032,18 @@ export default function InventoryScreen() {
     }
   };
 
-  const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
-    if (isScanning) return;
-    setIsScanning(true);
+ const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
+  if (hasScanned) return;
 
-    setAddBarcode(data); // Set state
-    await handleBarcodeSearch(data); // Call search immediately to avoid delay
+  setHasScanned(true);
 
-    setScannerModalVisible(false);
-    setAddModalVisible(true);
-  };
+  setScannerModalVisible(false);
+  setAddBarcode(data);
+
+  await handleBarcodeSearch(data);
+
+  setAddModalVisible(true);
+};
 
   const handleManualAddBarcode = () => {
     setScannerModalVisible(false);
@@ -1161,61 +1167,66 @@ export default function InventoryScreen() {
   };
 
   const handleBarcodeSearch = async (barcode: string) => {
-    if (!barcode || barcode.length < 3) return;
+  if (!barcode || barcode.length < 3) return;
 
-    setIsSearchingDetail(true);
+  setIsSearchingDetail(true);
 
-    try {
-      const res = await fetch(`${API_URL}/inventory/${barcode}`);
+  try {
+    // 1. Check your own Database
+    const res = await fetch(`${API_URL}/inventory/${barcode}`);
 
-      if (res.status === 200) {
-        const data = await res.json();
+    if (res.status === 200) {
+      const data = await res.json();
+      setIsExistingItem(true);
+      setAddName(data.medicine_name || '');
+      setAddCompany(data.company || '');
+      setAddPrice(data.price?.toString() || '');
+      setAddQuantity(data.quantity?.toString() || '0');
+      // Set advanced fields if they exist
+      setAddCategory(data.category || 'Tablet');
+      setAddComposition(data.composition || '');
+      setAddDistributor(data.distributor || '');
+      setAddExpiry(data.expiry_date || '');
+      setNewStockInput('0');
+      return;
+    }
 
-        setIsExistingItem(true);
+    // 2. If not in DB, check External API
+    if (res.status === 404) {
+      try {
+        const ext = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const extData = await ext.json();
 
-        setAddName(data.medicine_name || '');
-        setAddCompany(data.company || '');
-        setAddPrice(data.price?.toString() || '');
-        setAddQuantity(data.quantity?.toString() || '0');
-
-        setAddCategory(data.category || 'Tablet');
-        setAddComposition(data.composition || '');
-        setAddDistributor(data.distributor || '');
-        setAddExpiry(data.expiry_date || '');
-
-        setNewStockInput('0');
-
-      } else if (res.status === 404) {
-        setIsExistingItem(false);
-
-        // Optional external API
-        try {
-          const ext = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-          const extData = await ext.json();
-
-          if (extData.status === 1) {
-            setAddName(extData.product.product_name || '');
-            setAddCompany(extData.product.brands || '');
-          } else {
-            setAddName('');
-            setAddCompany('');
-          }
-
-        } catch {
-          setAddName('');
-          setAddCompany('');
+        if (extData.status === 1 && extData.product) {
+          setIsExistingItem(false); // It's a new item for YOUR db
+          setAddName(extData.product.product_name || '');
+          setAddCompany(extData.product.brands || '');
+          setAddPrice('');
+          setAddQuantity('');
+          return;
         }
 
-        setAddPrice('');
-        setAddQuantity('0');
-      }
+        // 3. ITEM NOT FOUND ANYWHERE
+        Alert.alert("Item Not Found", "This barcode does not exist in our system or online database.", [
+          {
+            text: "OK",
+            onPress: () => {
+              resetAddModal(); // Clears all fields and closes the Add Modal
+              setScannerModalVisible(true); // Re-opens the scanner
+            }
+          }
+        ]);
 
-    } catch (err) {
-      console.log("Search error", err);
-    } finally {
-      setIsSearchingDetail(false);
+      } catch (err) {
+        Alert.alert("Error", "Failed to reach external database.");
+      }
     }
-  };
+  } catch (err) {
+    console.log("Search error", err);
+  } finally {
+    setIsSearchingDetail(false);
+  }
+};
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const isLowStock = item.quantity < 20;
@@ -1353,7 +1364,7 @@ export default function InventoryScreen() {
         <View style={{ flex: 1, backgroundColor: 'black' }}>
           <CameraView
             style={StyleSheet.absoluteFillObject}
-            onBarcodeScanned={isScanning ? undefined : handleBarcodeScanned}
+            onBarcodeScanned={handleBarcodeScanned}
             barcodeScannerSettings={{ barcodeTypes: ["qr", "ean13", "code128", "upc_a", "upc_e"] }}
           />
           <View style={styles.scannerOverlay} pointerEvents="none">
@@ -1389,6 +1400,7 @@ export default function InventoryScreen() {
                     color: isExistingItem ? 'green' : 'orange',
                     marginBottom: 10
                   }}>
+
                     {isExistingItem ? "✓ Item Found in Inventory" : "New Item Detected"}
                   </Text>
                 ) : null}
