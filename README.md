@@ -57,7 +57,8 @@ flowchart TD
 
 ## 🏗️ Overall Description
 
-### 3.1 Product Perspective
+<details open>
+<summary><strong>3.1 Product Perspective</strong></summary>
 
 Medbill belongs to the **Healthcare Technology domain**, integrating:
 
@@ -65,9 +66,12 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - 🤖 AI/ML analytics  
 - ☁️ Cloud-based storage  
 
+</details>
+
 ---
 
-### 3.2 User Classes
+<details open>
+<summary><strong>3.2 User Classes</strong></summary>
 
 - **Pharmacy Owners** → Analytics & insights  
 - **Pharmacy Staff** → Fast billing system  
@@ -75,9 +79,15 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - **Suppliers** → Demand data  
 - **Government Systems** → Trend analysis  
 
+### 📷 User Classes Diagram
+![User Classes Diagram](ss/usecase.png)
+
+</details>
+
 ---
 
-### 3.3 Product Functions
+<details>
+<summary><strong>3.3 Product Functions</strong></summary>
 
 - ✅ QR/Barcode-based billing  
 - 📊 Sales data storage  
@@ -85,18 +95,24 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - 🤖 AI/ML demand prediction  
 - 📄 Intelligent reporting  
 
+</details>
+
 ---
 
-### 3.4 Operating Environment
+<details>
+<summary><strong>3.4 Operating Environment</strong></summary>
 
 - Android / iOS devices  
 - Internet connectivity  
 - Camera-enabled devices  
 - Backend + AI servers  
 
+</details>
+
 ---
 
-### 3.5 Design Considerations
+<details>
+<summary><strong>3.5 Design Considerations</strong></summary>
 
 #### 🚨 Problems Solved
 
@@ -112,20 +128,26 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - Demand prediction  
 - Reduced expiry losses  
 
+</details>
+
 ---
 
 ## 🚀 System Features
 
-### 🔥 Core Features (High Priority)
+<details open>
+<summary><strong>🔥 Core Features (High Priority)</strong></summary>
 
 - QR Code Scanning  
 - Automatic Bill Generation  
 - Secure Data Storage  
 - AI Demand Analysis  
 
+</details>
+
 ---
 
-### ⚙️ Functional Requirements
+<details>
+<summary><strong>⚙️ Functional Requirements</strong></summary>
 
 - QR Code Scanning  
 - Automatic Billing  
@@ -134,6 +156,8 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - AI/ML Prediction  
 - Report Generation  
 - Inventory Monitoring  
+
+</details>
 
 ---
 
@@ -144,63 +168,6 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - ❌ Fewer errors  
 - 📊 Structured data  
 - 📦 Better inventory management  
-
----
-
-## 📌 Use Case Specifications
-
-### 1. QR Code Billing
-
-- Scan medicine  
-- Fetch details  
-- Generate bill  
-
-👉 **Outcome:** Fast & accurate billing  
-
----
-
-### 2. Fast Checkout
-
-- No manual entry  
-- Reduced errors  
-
-👉 **Outcome:** Efficient workflow  
-
----
-
-### 3. Sales Data Storage
-
-- Stores transaction data  
-- Maintains history  
-
-👉 **Outcome:** Reliable records  
-
----
-
-### 4. Analytics & Visualization
-
-- Charts & reports  
-- Custom filters  
-
-👉 **Outcome:** Business insights  
-
----
-
-### 5. AI/ML Demand Analysis
-
-- Predict trends  
-- Identify demand  
-
-👉 **Outcome:** Smart inventory planning  
-
----
-
-### 6. Inventory Optimization
-
-- Prevent overstocking  
-- Reduce expiry losses  
-
-👉 **Outcome:** Cost savings  
 
 ---
 
@@ -226,5 +193,12 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 - 🔗 Supplier integration  
 - 🎤 Voice-based billing  
 - 📶 Offline mode  
+
+---
+
+## 🔁 Sequence Diagram
+
+### 📷 System Sequence Flow
+![Sequence Diagram](ss/sequence.png)
 
 ---
