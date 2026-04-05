@@ -34,6 +34,12 @@ Medbill bridges the gap between healthcare and technology. It automates the chec
 
 ---
 
+> ⚠️ **Note:** As students, we were unable to use paid Indian medicine APIs.  
+> Instead, we used the free [OpenFoodFacts API](https://world.openfoodfacts.org), which provides similar functionality (barcode scanning, product name, and manufacturer details).  
+> The AI/ML model is trained on actual medicine datasets, ensuring accurate analysis and predictions.
+
+---
+
 ## 🧩 System Workflow
 The following diagram illustrates the seamless transition from medicine scanning to AI-driven reporting:
 
@@ -255,3 +261,24 @@ Medbill/
 └── 📜 README.md                   # Project documentation
 
 ```
+
+## 📸 Application Screenshots
+
+Below are the key screens of the Medbill application:
+
+| 🖼️ Screen | 📷 Preview |
+|----------|-----------|
+| **1. Landing Page** | ![Landing Page](ss/landing.png) |
+| **2. Sign In Page** | ![Sign In](ss/signin.png) |
+| **3. Sign Up Page** | ![Sign Up](ss/signup.png) |
+| **4. Scan QR / Barcode Page** <br> *(Manual entry available)* | ![Scan QR](ss/scan.png) |
+| **5. QR Preview Page** <br> *(Remove medicine)* | ![QR Preview](ss/qr_preview.png) |
+| **6. Final Invoice Preview Page** | ![Final Preview](ss/final_preview.png) |
+| **7. Inventory Page** <br> *(All stock shown)* | ![Inventory](ss/inventory.png) |
+| **8. Add / Update Stock Page** <br> *(Update if exists, else new medicine + manual entry)* | ![Add Stock](ss/add_stock.png) |
+| **9. All Receipts Page** | ![Receipts](ss/receipts.png) |
+| **10. Receipt Description Page** | ![Receipt Detail](ss/receipt_detail.png) |
+| **11. Insights Page** <br> *(ML-based recommendations)* | ![Insights](ss/insights.png) |
+| **12. Settings Page** | ![Settings](ss/settings.png) |
+
+---
