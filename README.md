@@ -1,4 +1,7 @@
-# 💊 Medbill – Smart Pharmacy Billing System
+<p align="center">
+  <img src="ss/medbill.png" alt="Medbill Logo" width="120px">
+</p>
+# Medbill – Smart Pharmacy Billing System
 
 [![Team: Bill Wizards](https://img.shields.io/badge/Team-Bill%20Wizards-blueviolet)](#-about-the-team--bill-wizards)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -171,28 +174,26 @@ Medbill belongs to the **Healthcare Technology domain**, integrating:
 
 ---
 
-## 🧠 Tech Stack
+## 🛠️ The Tech Stack: Under the Hood
 
-### Frontend
-- ⚛️ React Native (TypeScript)
+We chose a modern, scalable, and developer-friendly stack to ensure **Medbill** is both performant and intelligent.
 
-### Backend
-- 🐍 Flask (Python)
+### 📱 Frontend (Mobile App)
+* **React Native (TypeScript):** For building a truly cross-platform experience (iOS & Android) with a single codebase. TypeScript ensures type safety, reducing bugs in the billing logic.
+* **Expo:** Streamlines the development process and provides easy access to native device features like the **Camera** for QR scanning.
 
-### Database
-- 🌐 Neon Tech (Serverless PostgreSQL)
+### 🏗️ Backend & API
+* **Flask (Python):** A lightweight and powerful micro-framework. It acts as the bridge between our mobile frontend and our AI logic, providing fast and secure RESTful APIs.
 
-### AI/ML
-- 🤖 Python (Pandas, Scikit-learn)
+### 🗄️ Database & Storage
+* **Neon Tech (PostgreSQL):** A serverless PostgreSQL database that scales automatically. It offers "database branching," allowing us to test new features safely without affecting live billing data.
 
----
+### 🤖 Intelligence (AI/ML)
+* **Python (Pandas & Scikit-learn):** The powerhouse of our demand analysis. 
+    * **Pandas:** Cleans and processes raw transaction data.
+    * **Scikit-learn:** Implements regression and classification models to predict future stock requirements based on historical sales.
+* **Matplotlib / Chart.js:** Used to transform complex ML predictions into easy-to-read visual insights for the shopkeeper.
 
-## 📌 Future Enhancements
-
-- 🔄 Real-time inventory sync  
-- 🔗 Supplier integration  
-- 🎤 Voice-based billing  
-- 📶 Offline mode  
 
 ---
 
