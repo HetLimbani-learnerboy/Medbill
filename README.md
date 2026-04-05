@@ -10,7 +10,7 @@
 ## 👨‍💻 Team: Bill Wizards
 We are **Bill Wizards** because we transform traditional pharmacy billing into a fast, intelligent, and almost magical experience.
 
-| Name | Enrollment ID |
+| Name | USN |
 | :--- | :--- |
 | **Het Limbani** | 1AUA23BCS063 |
 | **Shriman Dasadiya** | 1AUA23BCS174 |
@@ -53,6 +53,7 @@ flowchart TD
     J --> K[AI/ML Demand Analysis]
     K --> L[Insights to Shopkeeper]
     L --> M[End]
+```
 
 ## 🏗️ Overall Description
 
