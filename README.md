@@ -35,7 +35,7 @@ Medbill bridges the gap between healthcare and technology. It automates the chec
 ---
 
 > ⚠️ **Note:** As students, we were unable to use paid Indian medicine APIs.  
-> Instead, we used the free [OpenFoodFacts API](https://world.openfoodfacts.org/product), which provides similar functionality (barcode scanning, product name, and manufacturer details).  
+> Instead, we used the free [OpenFoodFacts API](https://world.openfoodfacts.org), which provides similar functionality (barcode scanning, product name, and manufacturer details).  
 > The AI/ML model is trained on actual medicine datasets, ensuring accurate analysis and predictions.
 
 ---
