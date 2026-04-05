@@ -255,3 +255,24 @@ Medbill/
 └── 📜 README.md                   # Project documentation
 
 ```
+
+## 📸 Application Screenshots
+
+Below are the key screens of the Medbill application:
+
+| 🖼️ Screen | 📷 Preview |
+|----------|-----------|
+| **1. Landing Page** | ![Landing Page](ss/landing.png) |
+| **2. Sign In Page** | ![Sign In](ss/signin.png) |
+| **3. Sign Up Page** | ![Sign Up](ss/signup.png) |
+| **4. Scan QR / Barcode Page** | ![Scan QR](ss/scan.png) |
+| **5. QR Preview Page** <br> *(Remove medicine + Manual entry available)* | ![QR Preview](ss/qr_preview.png) |
+| **6. Final Bill Preview Page** | ![Final Preview](ss/final_preview.png) |
+| **7. Inventory Page** <br> *(All stock shown)* | ![Inventory](ss/inventory.png) |
+| **8. Add / Update Stock Page** <br> *(Update if exists, else new medicine + manual entry)* | ![Add Stock](ss/add_stock.png) |
+| **9. All Receipts Page** | ![Receipts](ss/receipts.png) |
+| **10. Receipt Description Page** | ![Receipt Detail](ss/receipt_detail.png) |
+| **11. Insights Page** <br> *(ML-based recommendations)* | ![Insights](ss/insights.png) |
+| **12. Settings Page** | ![Settings](ss/settings.png) |
+
+---
