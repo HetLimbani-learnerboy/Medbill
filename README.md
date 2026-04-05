@@ -1,7 +1,8 @@
 <p align="center">
   <img src="ss/medbill.png" alt="Medbill Logo" width="120px">
 </p>
-# Medbill – Smart Pharmacy Billing System
+
+## Medbill – Smart Pharmacy Billing System
 
 [![Team: Bill Wizards](https://img.shields.io/badge/Team-Bill%20Wizards-blueviolet)](#-about-the-team--bill-wizards)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -203,3 +204,54 @@ We chose a modern, scalable, and developer-friendly stack to ensure **Medbill** 
 ![Sequence Diagram](ss/sequence.png)
 
 ---
+
+## 📂 Project Structure
+
+Medbill follows a clean, decoupled architecture separating the **mobile frontend** from the **AI-powered backend**.
+
+```text
+Medbill/
+├── 📱 frontend/                     # React Native (TypeScript) App
+│   ├── assets/                     # Images, icons, fonts
+│   ├── app/
+│   │   ├── tabs/                   # Main screens (_layout.tsx, index.tsx, inventory, insights, receipts, settings)
+│   │   ├── CartContext.tsx         # Global cart state management
+│   │   ├── HelpSupport.tsx
+│   │   ├── LandingPage.tsx
+│   │   ├── SignIn.tsx
+│   │   ├── SignUp.tsx
+│   │   └── ...                     # Other screens/components
+│   ├── app.json
+│   └── ...
+│
+├── ⚙️ backend-flask/               # Flask (Python) Backend API
+│   ├── app/
+│   │   ├── models/                # Data models + AI/ML logic
+│   │   │   ├── __init__.py
+│   │   │   ├── demand_model.py    # Demand prediction (CatBoost / Scikit-learn)
+│   │   │   ├── medicine_model.py
+│   │   │   ├── receipts_model.py
+│   │   │   └── user_model.py
+│   │   │
+│   │   ├── routes/                # API routes
+│   │   │   ├── __init__.py
+│   │   │   ├── auth_routes.py
+│   │   │   ├── insights.py
+│   │   │   ├── medicine_routes.py
+│   │   │   └── receipt_routes.py
+│   │   │
+│   │   └── __init__.py
+│   │
+│   ├── catboost_info/             # Model training metadata
+│   ├── .env                       # Environment variables (DB URI, secrets)
+│   ├── requirements.txt           # Python dependencies
+│   └── run.py                     # Entry point for Flask server
+│
+├── 📁 ss/                         # Screenshots & diagrams
+│   ├── usecase.png
+│   ├── sequence.png
+│   └── ...
+│
+└── 📜 README.md                   # Project documentation
+
+```
