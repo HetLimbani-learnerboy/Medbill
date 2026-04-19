@@ -11,18 +11,6 @@
 
 ---
 
-## 👨‍💻 Team: Bill Wizards
-We are **Bill Wizards** because we transform traditional pharmacy billing into a fast, intelligent, and almost magical experience.
-
-| Name | USN |
-| :--- | :--- |
-| **Het Limbani** | 1AUA23BCS063 |
-| **Shriman Dasadiya** | 1AUA23BCS174 |
-| **Kaloliya Gaurav** | 1AUA24BCS906 |
-| **Saiyam Shah** | 1AUA23BCS166 |
-
----
-
 ## 🚀 Project Overview
 Medbill bridges the gap between healthcare and technology. It automates the checkout process, minimizes human error, and provides pharmacy owners with deep insights into their inventory and sales trends.
 
